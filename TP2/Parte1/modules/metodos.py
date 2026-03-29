@@ -1,4 +1,5 @@
 import sympy as sp
+import numpy as np
 
 def metod_euler(f , a, b, yi, h):
     y = yi #valor anterior
@@ -10,8 +11,7 @@ def metod_euler(f , a, b, yi, h):
         if y < 0:
             y = 0
         t = t + h 
-        lista.append((t, y))
-        
+        lista.append((t, y))  
     return lista
 
 def serieTaylor(f, a, n):
@@ -21,6 +21,7 @@ def serieTaylor(f, a, n):
         derivada = sp.diff(f, x, k).subs(x, a)
         serie += derivada / sp.factorial(k) * (x - a)**k
     return serie
+
 
 def metod_ruger():
     pass

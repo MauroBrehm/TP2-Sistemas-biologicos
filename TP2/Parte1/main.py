@@ -2,7 +2,7 @@ import sympy as sp
 import numpy as np
 from modules.graficador import grafico_euler
 from modules.metodos import metod_euler
-
+from modules.calculo_errores import calcular_error
 # Parametros
 t = sp.symbols('t')
 P = sp.Function('P')

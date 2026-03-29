@@ -17,5 +17,5 @@ def grafico_euler(resueltados:list, labels):
     ax.grid()
     ax.legend()
 
-    fig.savefig("test.png")
+    fig.savefig("metodoEuler.png")
     plt.show()

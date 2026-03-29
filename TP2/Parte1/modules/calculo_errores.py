@@ -1,19 +1,11 @@
-import sympy as sp
 
-def derivadas(func,orden):#Esto lo saque de Ecuaciones Diferenciales
-    for sym in func.free_symbols:
-        t = sym
-    derivadas = []
-    #derivada[0]=func
-    for i in range(orden):
-        derivadas.append(func.diff(t,i))
-    return derivadas
-
-# r=10.0
-# K=1000.0
-# p0=10.0
-#funcion P(t) = K/(1+(K/p0-1)*exp(-r*t)) ya esta resuelta
-t = sp.symbols('t', real=True)
-def P(t):
-    return 1000.0/(1+(1000.0/10.0-1)*sp.exp(-10.0*t))    
-print (P(t))
+def calcular_error(sol_numerica: list, sol_exacta_func):
+    """Calcula el error absoluto solución numérica y exacta"""
+    errores = []
+    for i in sol_numerica:
+        for t, P_num in i:
+            P_exact = sol_exacta_func(t)
+            error_abs = abs(P_num - P_exact)
+            errores.append((t, error_abs))
+    
+    return errores #no siento q este bien
