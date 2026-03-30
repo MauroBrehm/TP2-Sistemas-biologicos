@@ -14,14 +14,46 @@ def metod_euler(f , a, b, yi, h):
         lista.append((t, y))  
     return lista
 
-def serieTaylor(f, a, n):
-    x = sp.symbols('x', real=True)
-    serie = 0
-    for k in range(n+1):
-        derivada = sp.diff(f, x, k).subs(x, a)
-        serie += derivada / sp.factorial(k) * (x - a)**k
-    return serie
+def metod_taylor_segundo_orden(f, dfdy, a, b, yi, h, dfdt=None):
+    """Método de Taylor de orden 2 para y' = f(t, y).
+
+    
+
+    Parámetros:
+    - f: función f(t, y) que devuelve y'.
+    - dfdy: derivada de f con respecto a y.
+    - dfdt: opcional ∂f/∂t función de (t, y); si no se da, se asume 0.
+    - a, b: intervalo de integración.
+    - yi: valor inicial y(a).
+    - h: paso numérico."""
+    
+    if dfdt is None:
+        dfdt = lambda t, y: 0
+
+    y = yi
+    t = a
+    m = int((b - a) / h)
+    lista = [(t, y)]
+
+    for i in range(m):
+        f_val = f(t, y)
+        derivada_segundo = dfdt(t, y) + dfdy(t, y) * f_val
+
+        y = y + f_val * h + 0.5 * derivada_segundo * h**2
+        if y < 0:
+            y = 0
+
+        t = t + h
+        lista.append((t, y))
+
+    return lista
+
+
 
 
 def metod_ruger():
+    pass
+
+
+if __name__ == "__main__":
     pass
