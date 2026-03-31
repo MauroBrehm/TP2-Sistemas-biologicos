@@ -17,8 +17,6 @@ def metod_euler(f , a, b, yi, h):
 def metod_taylor_segundo_orden(f, dfdy, a, b, yi, h, dfdt=None):
     """Método de Taylor de orden 2 para y' = f(t, y).
 
-    
-
     Parámetros:
     - f: función f(t, y) que devuelve y'.
     - dfdy: derivada de f con respecto a y.
@@ -48,12 +46,41 @@ def metod_taylor_segundo_orden(f, dfdy, a, b, yi, h, dfdt=None):
 
     return lista
 
+def metod_ruger(f, a, b, yi, h, orden):
+    m = int((b-a)/h)
+    y = yi
+    t = a
+    if orden == 4:
+        lista_RK4 = [(t, y)]
+        for i in range(m):
+            f1 = f(t, y)
+            f2 = f(t+h/2, y+h/2*f1)
+            f3 = f(t+h/2, y+h/2*f2)
+            f4 = f(t+h, y+h*f3)
+            y = y + (h*(f1+2*f2+2*f3+f4))/6
+            if y < 0:
+                y = 0
+            t = t + h
+            lista_RK4.append((t, y))
+        return lista_RK4
+    if orden == 2:
+        ''' y = y+(a1*f1 + a2*f2)*h
+        Donde, 
+            f1 = f(t, y)
+            f2 = f(t+p1*h, y+q11*f1*h)
+        Aplicamos metodo del punto medio para dar valores a las constantes desconocidas
+        a2 = 1 ; a1 = 0 ; p1 = q11 = 1/2 '''
 
-
-
-def metod_ruger():
-    pass
-
-
+        lista_RK2 = [(t,y)]
+        for i in range(m):
+            f_1 = f(t, y)
+            f_2 = f(y+1/2*h, y+1/2*f_1*h)
+            y = y + f_2*h
+            if y < 0:
+                y = 0
+            t = t + h
+            lista_RK2.append ((t, y))
+        return lista_RK2
+    
 if __name__ == "__main__":
     pass
