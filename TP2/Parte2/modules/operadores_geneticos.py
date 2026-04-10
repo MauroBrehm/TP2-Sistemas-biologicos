@@ -1,4 +1,4 @@
-def decode_chromosome(chromosome, p_min, p_max):
+def decode_chromosome(chromosome, p_min, p_max): #convierte un cromosoma binario en un valor real entre p_min y p_max
     L = len(chromosome)
     decimal_value = sum(bit * (2 ** (L - 1 - i)) for i, bit in enumerate(chromosome))
     p = p_min + (p_max - p_min) * decimal_value / (2**L - 1)
@@ -25,15 +25,16 @@ def encode_chromosome(p, p_min, p_max, L):
     chromosome = [int(bit) for bit in binario]
     return chromosome
 
-def encode_beta_gamma(beta, gamma, beta_min, beta_max, gamma_min, gamma_max, L=8):
-    bits_beta = encode_chromosome(beta, beta_min, beta_max, L)
-    bits_gamma = encode_chromosome(gamma, gamma_min, gamma_max, L)
+def encode_beta_gamma(beta, gamma, beta_min, beta_max, gamma_min, gamma_max, L_total=16): #lo hago de 16 y despues lo divido en 8 para cada parametro para que no genere confusion
+    mitad = L_total // 2
+    bits_beta = encode_chromosome(beta, beta_min, beta_max, mitad)
+    bits_gamma = encode_chromosome(gamma, gamma_min, gamma_max, mitad)
     return bits_beta + bits_gamma
 
 def calcular_ecm(I_simulado, I_observado):
     """Calcula el Error Cuadrático Medio entre valores simulados y observados"""
     n = len(I_simulado)
-    ecm = sum((I_simulado[i] - I_observado[i])**2 for i in range(n)) / n # Ecuacion EMC
+    ecm = sum((I_simulado[i] - I_observado[i])**2 for i in range(n)) / n # Ecuacion ECM
     return ecm
 
 import random
