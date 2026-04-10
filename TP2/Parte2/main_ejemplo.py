@@ -146,10 +146,10 @@ def evaluar_poblacion(poblacion):
 #listas para guardar el mejor fitness y el promedio de cada generación
 mejores=[]
 promedios=[]
-
+print('Se crean las generaciones')
 #bucle evolutivo del AG
 for gen in range(generaciones):
-    print(f"Generación {gen + 1}")
+    # print(f"Generación {gen + 1}")
     fitnesses = evaluar_poblacion(poblacion)
     mejores.append(max(fitnesses))
     promedios.append(sum(fitnesses) / len(fitnesses))
@@ -159,7 +159,7 @@ for gen in range(generaciones):
     mejor_individuo = poblacion[mejor_indice][:]
     
     #seccionamos usando ruleta, aplicamos cruzamiento y mutacion para generar la nueva poblacion
-    seleccionados = seleccion_ruleta(poblacion, fitnesses, n_poblacion - 1)
+    seleccionados = seleccion_ruleta(poblacion, fitnesses, n_poblacion )
     nueva_poblacion=[]
     for i in range (0, n_poblacion, 2):
         padre1=seleccionados[i]
@@ -176,7 +176,6 @@ for gen in range(generaciones):
 
 #resultados finales
 fitnesses_final = evaluar_poblacion(poblacion)
-
 #obtener el mejor individuo de final
 mejor_indice_final = fitnesses_final.index(max(fitnesses_final))
 mejor=poblacion[mejor_indice_final]
@@ -184,7 +183,7 @@ mejor=poblacion[mejor_indice_final]
 #decodificamos el mejor individuo para obtener los valores de beta y gamma
 beta_final, gamma_final = decode_beta_gamma(mejor, beta_min, beta_max, gamma_min, gamma_max)
 print("\nMejor solución encontrada:")
-print(f"beta: {beta_final}, gamma: {gamma_final}")
+print(f"beta: {beta_final:.3f}, gamma: {gamma_final:.3f}")
 print(f"R0 = {beta_final / gamma_final:.2f}")
 
 #error relativo porcentual
