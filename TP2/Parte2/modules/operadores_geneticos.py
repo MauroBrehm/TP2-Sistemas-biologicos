@@ -1,3 +1,6 @@
+from modules.metodo import metod_taylor_segundo_orden, crear_modelo_sir
+import random
+
 def decode_chromosome(chromosome, p_min, p_max): #convierte un cromosoma binario en un valor real entre p_min y p_max
     L = len(chromosome)
     decimal_value = sum(bit * (2 ** (L - 1 - i)) for i, bit in enumerate(chromosome))
@@ -37,7 +40,7 @@ def calcular_ecm(I_simulado, I_observado):
     ecm = sum((I_simulado[i] - I_observado[i])**2 for i in range(n)) / n # Ecuacion ECM
     return ecm
 
-import random
+
 def seleccion_ruleta(poblacion, fitnesses, k):
     """Selecciona k individuos de la población usando selección por ruleta
     poblacion: lista de cromosomas (listas de bits)
@@ -83,3 +86,22 @@ def mutacion(cromosoma, pm=0.02): #tipicamente pm= 1/L (es aprox 0.062 para L=16
         if random.random() < pm:
             mutado[i] = 1 - mutado[i]  #inivierte el bit
     return mutado
+
+def evaluar_poblacion(poblacion, beta_min, beta_max, gamma_min, gamma_max, a, b, S0, I0, R0, h, indices, I_obs):
+    '''Evalua que tan bueno es cada individuo de la poblacion'''
+    fitnesses = []
+    for cromosoma in poblacion:
+        #decodificamos el cromosoma para obtener beta y gamma
+        beta_val, gamma_val = decode_beta_gamma(cromosoma, beta_min, beta_max, gamma_min, gamma_max)
+        #creamos el modelo SIR para esos valores
+        f_individuo, jac_indiviuo = crear_modelo_sir(beta_val, gamma_val)
+        #simulamos el modelo con Taylor de orden 2
+        resultados_sim = metod_taylor_segundo_orden(f_individuo, jac_indiviuo, a, b, [S0, I0, R0], h)
+        #sacamos curva de infectados simulados
+        I_sim_totsl = [estado[1] for _, estado in resultados_sim]
+        I_sim = [I_sim_totsl[i] for i in indices] #solo los 30 puntos que tenemos de observados
+        #calculamos el ECM entre la curva simulada y la observada
+        ecm = calcular_ecm(I_sim, I_obs)
+        fitness = 1 / (1 + ecm)  #Evitamos división por cero
+        fitnesses.append(fitness)
+    return fitnesses

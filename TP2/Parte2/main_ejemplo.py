@@ -1,30 +1,8 @@
-from modules.metodo import metod_taylor_segundo_orden
+
 import random
-import matplotlib.pyplot as plt
-from modules.operadores_geneticos import encode_beta_gamma, decode_beta_gamma, calcular_ecm
-from modules.operadores_geneticos import seleccion_ruleta, mutacion, cruzamiento
-
-#Esta funcion va a generar el modelo SIR para valores especificos de beta y gamma
-#se usa para que cada individuo del AG tenga su propio modelo
-def crear_modelo_sir(beta, gamma):
-    def f(t, N): #sistema EDO
-        S, I, R = N
-        N_total = 1000
-        dSdt = -beta * S * I / N_total
-        dIdt = beta * S * I / N_total - gamma * I
-        dRdt = gamma * I
-        return [dSdt, dIdt, dRdt]
-
-#Definimos el Jacobiano para el método de Taylor
-    def jacobian(t, N):
-        S, I, R = N  
-        N_total = 1000
-        return [
-            [-beta * I / N_total, -beta * S / N_total, 0],
-            [beta * I / N_total, beta * S / N_total - gamma, 0],
-            [0, gamma, 0]
-        ]
-    return f, jacobian
+from modules.metodo import metod_taylor_segundo_orden, crear_modelo_sir
+from modules.operadores_geneticos import decode_beta_gamma, calcular_ecm, evaluar_poblacion, seleccion_ruleta, mutacion, cruzamiento, ejecutar_ag_con_rangos
+from modules.graficador import graficar_modelo_AG, grafico_comparacion_curvas, graficar_vector_I
 
 #Implementamos Taylor de orden 2 para el modelo SIR 
 #intervalo de simulacion(dias)
@@ -55,12 +33,7 @@ print(f"El número básico de reproducción R0 es: {R0:.2f}")
 t_values = [t for t, _ in resultados]
 I_values = [N[1] for _, N in resultados]
 
-plt.plot(t_values, I_values, label='I(t)')
-plt.xlabel('t')
-plt.ylabel('I')
-plt.title('Evolución de la población infectada')
-plt.legend()
-plt.show()
+graficar_vector_I(t_values, I_values)
 
 print ('-'*50)
 print("Implementacion del AG - Codificacion y Decodificación ")
@@ -124,25 +97,6 @@ poblacion=[
 ]
 
 #funcion de fitness
-#evalua que tan bueno es cada individuo de la poblacion
-def evaluar_poblacion(poblacion):
-    fitnesses = []
-    for cromosoma in poblacion:
-        #decodificamos el cromosoma para obtener beta y gamma
-        beta_val, gamma_val = decode_beta_gamma(cromosoma, beta_min, beta_max, gamma_min, gamma_max)
-        #creamos el modelo SIR para esos valores
-        f_individuo, jac_indiviuo = crear_modelo_sir(beta_val, gamma_val)
-        #simulamos el modelo con Taylor de orden 2
-        resultados_sim = metod_taylor_segundo_orden(f_individuo, jac_indiviuo, a, b, [S0, I0, R0], h)
-        #sacamos curva de infectados simulados
-        I_sim_totsl = [estado[1] for _, estado in resultados_sim]
-        I_sim = [I_sim_totsl[i] for i in indices] #solo los 30 puntos que tenemos de observados
-        #calculamos el ECM entre la curva simulada y la observada
-        ecm = calcular_ecm(I_sim, I_obs)
-        fitness = 1 / (1 + ecm)  #Evitamos división por cero
-        fitnesses.append(fitness)
-    return fitnesses
-
 #listas para guardar el mejor fitness y el promedio de cada generación
 mejores=[]
 promedios=[]
@@ -150,7 +104,7 @@ print('Se crean las generaciones')
 #bucle evolutivo del AG
 for gen in range(generaciones):
     # print(f"Generación {gen + 1}")
-    fitnesses = evaluar_poblacion(poblacion)
+    fitnesses = evaluar_poblacion(poblacion, beta_min, beta_max, gamma_min, gamma_max, a, b, S0, I0, R0, h, indices, I_obs)
     mejores.append(max(fitnesses))
     promedios.append(sum(fitnesses) / len(fitnesses))
 
@@ -175,7 +129,7 @@ for gen in range(generaciones):
     poblacion=nueva_poblacion
 
 #resultados finales
-fitnesses_final = evaluar_poblacion(poblacion)
+fitnesses_final = evaluar_poblacion(poblacion, beta_min, beta_max, gamma_min, gamma_max, a, b,S0, I0, R0, h, indices, I_obs )
 #obtener el mejor individuo de final
 mejor_indice_final = fitnesses_final.index(max(fitnesses_final))
 mejor=poblacion[mejor_indice_final]
@@ -193,13 +147,7 @@ print(f"Error relativo porcentual en beta: {error_beta:.2f}%")
 print(f"Error relativo porcentual en gamma: {error_gamma:.2f}%")
 
 #grafico del AG
-plt.plot(mejores, label='Mejor fitness')
-plt.plot(promedios, label='Fitness promedio')
-plt.xlabel('Generación')
-plt.ylabel('Fitness')
-plt.legend()
-plt.title("Evolución del algoritmo genético")
-plt.show()
+graficar_modelo_AG(mejores, promedios)
 
 #simulacion final con beta* y gamma*
 f_final, jac_final = crear_modelo_sir(beta_final, gamma_final)
@@ -210,16 +158,39 @@ I_final = [estado[1] for _, estado in resultados_final]
 R_final = [estado[2] for _, estado in resultados_final]
 
 #grafico comparativo
-plt.plot(t_final, S_final, label='S(t)')
-plt.plot(t_final, I_final, label='I(t) estimado')
-plt.plot(t_final, R_final, label='R(t)')
+grafico_comparacion_curvas(t_final, S_final, I_final, R_final, indices, I_obs)
 
-#graficamos I(t) observado para comparar
-t_obs = [t_final[i] for i in indices]
-plt.scatter(t_obs, I_obs, color='pink', label='I(t) observado')
+'''Se busca ver como actua el algortimo AG con otros valores'''
+print('-'*50)
+print('Variamos los valores de L para observar los errores de cuantizacion')
+L_vals = [4, 8, 16]
+#para beta con p_min = 0.05 y p_max = 1
+p_min = 0.05
+p_max = 1
 
-plt.xlabel('tiempo')
-plt.ylabel('población')
-plt.legend()
-plt.title('Comparación entre modelo SIR estimado vs datos observados')
-plt.show()
+print('Los valores de errores de cuantizacion minimos son:')
+for i in L_vals:
+    print(f'Para un L = {i}')
+    error_cuantizacion_min = (p_max - p_min)/(2**i - 1)  # Corregir: 2**i en lugar de 2*i
+    print(f'Obtenemos un error = {error_cuantizacion_min:.6f} aproximadamente')
+    #se observa que para un L mas grande el error de cuantizacion minima es mas precida pero hay un piso en la precision que no va a superar AG
+
+print('-'*50)
+print('Analisis de efecto de ampliar rangos de busqueda')
+# Ejecutar comparación con diferentes rangos
+resultados = []
+
+# Caso 1: Rangos originales (estrechos)
+caso1 = ejecutar_ag_con_rangos(0.05, 1.0, 0.01, 0.5)
+resultados.append(caso1)
+
+# Caso 2: Rangos ampliados
+caso2 = ejecutar_ag_con_rangos(0.01, 2.0, 0.001, 1.0)
+resultados.append(caso2)
+
+# Caso 3: Rangos muy ampliados
+caso3 = ejecutar_ag_con_rangos(0.001, 5.0, 0.0001, 2.0)
+resultados.append(caso3)
+
+for i in resultados:
+    print(f"Probabilidad aproximada de encontrar solución óptima por azar: {i:.2e}, en cada caso respectivamente")

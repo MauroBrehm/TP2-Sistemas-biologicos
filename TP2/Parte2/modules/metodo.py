@@ -33,3 +33,25 @@ def metod_taylor_segundo_orden(f, dfdy, a, b, yi, h, dfdt=None):
         lista.append((t, y.copy()))
 
     return lista
+
+def crear_modelo_sir(beta, gamma):
+    '''Genera el modelo SIR para valores especificos de beta y gamma
+    se usa para que cada individuo del AG tenga su propio modelo'''
+    def f(t, N): #sistema EDO
+        S, I, R = N
+        N_total = 1000
+        dSdt = -beta * S * I / N_total
+        dIdt = beta * S * I / N_total - gamma * I
+        dRdt = gamma * I
+        return [dSdt, dIdt, dRdt]
+
+    #Definimos el Jacobiano para el método de Taylor
+    def jacobian(t, N):
+        S, I, R = N  
+        N_total = 1000
+        return [
+            [-beta * I / N_total, -beta * S / N_total, 0],
+            [beta * I / N_total, beta * S / N_total - gamma, 0],
+            [0, gamma, 0]
+        ]
+    return f, jacobian
