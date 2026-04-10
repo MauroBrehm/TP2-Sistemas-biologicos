@@ -3,44 +3,44 @@ import random
 import matplotlib.pyplot as plt
 from modules.operadores_geneticos import encode_beta_gamma, decode_beta_gamma, calcular_ecm
 
-#Definimos la funcion que es el Modelo SIR
-beta = 0.3
-gamma = 0.1
-def f(t, N):
-    '''Modelo SIR'''
-    S, I, R = N
-    # beta = 0.3
-    # gamma = 0.1
-    N_total = 1000
-    dSdt = -beta * S * I / N_total
-    dIdt = beta * S * I / N_total - gamma * I
-    dRdt = gamma * I
-    return [dSdt, dIdt, dRdt]
+#Esta funcion va a generar el modelo SIR para valores especificos de beta y gamma
+#se usa para que cada individuo del AG tenga su propio modelo
+def crear_modelo_sir(beta, gamma):
+    def f(t, N): #sistema EDO
+        S, I, R = N
+        N_total = 1000
+        dSdt = -beta * S * I / N_total
+        dIdt = beta * S * I / N_total - gamma * I
+        dRdt = gamma * I
+        return [dSdt, dIdt, dRdt]
 
 #Definimos el Jacobiano para el método de Taylor
-def jacobian(t, N):
-    S, I, R = N
-    # beta = 0.3
-    # gamma = 0.1
-    N_total = 1000
-    return [
-        [-beta * I / N_total, -beta * S / N_total, 0],
-        [beta * I / N_total, beta * S / N_total - gamma, 0],
-        [0, gamma, 0]
-    ]
+    def jacobian(t, N):
+        S, I, R = N  
+        N_total = 1000
+        return [
+            [-beta * I / N_total, -beta * S / N_total, 0],
+            [beta * I / N_total, beta * S / N_total - gamma, 0],
+            [0, gamma, 0]
+        ]
+    return f, jacobian
 
 #Implementamos Taylor de orden 2 para el modelo SIR 
-#paso=0.5 y N=1000
-#Condiciones iniciales: S(0)=990, I(0)=10, R(0)=0 durante 60 dias
+#intervalo de simulacion(dias)
 a = 0
 b = 60
+#paso
 h = 0.5
+#poblacion total
 N = 1000
+#condiciones iniciales
 S0 = 990
 I0 = 10
 R0 = 0
+#generamos datos "reales" usando los valores verdaderos de beta y gamma, van a ser los que el AG intente reproducir
+f_real,jac_real = crear_modelo_sir(0.3, 0.1)
 
-resultados = metod_taylor_segundo_orden(f, jacobian, a, b, [S0, I0, R0], h)
+resultados = metod_taylor_segundo_orden(f_real, jac_real, a, b, [S0, I0, R0], h)
 
 #Imprimimos los resultados
 for t, N in resultados:
@@ -90,7 +90,7 @@ print(f"Decodificado cromosoma random: beta={beta_dec}, gamma={gamma_dec}")
 print('-'*50)
 print ('A continuacion se muestra la implementacion del fitness')
 
-# Datos observados: usamos la simulación con beta=0.3, gamma=0.1 como referencia
+# Datos observados de infectados: usamos la simulación con beta=0.3, gamma=0.1 como referencia
 I_obs = [N[1] for _, N in resultados]
 
 
@@ -103,8 +103,8 @@ individuos = {
 }
 
 for nombre, (beta_val, gamma_val) in individuos.items():
-    beta, gamma = beta_val, gamma_val
-    res_individuo = metod_taylor_segundo_orden(f, jacobian, a, b, [S0, I0, R0], h)
+    f_individuo, jac_individuo = crear_modelo_SIR(beta_val, gamma_val)
+    res_individuo = metod_taylor_segundo_orden(f_individuo, jac_individuo, a, b, [S0, I0, R0], h)
     I_simulado = [N[1] for _, N in res_individuo] # datos de curva infectadors integrando SIR
     ecm = calcular_ecm(I_simulado, I_obs)
     fitness = 1/(1+ecm)
