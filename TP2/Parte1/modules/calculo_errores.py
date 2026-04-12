@@ -7,5 +7,5 @@ def calcular_error(sol_numerica: list, sol_exacta_func):
         error_abs = abs(P_num - P_exact)
         errores.append((t, error_abs))
     
-    return errores #no siento q este bien
+    return errores
 

@@ -83,6 +83,8 @@ diferencia_error_Euler_h1 = [(t, abs(e32 - e64)) for ((t, e32), (_, e64)) in zip
 diferencia_error_Euler_h2 = [(t, abs(e32 - e64)) for ((t, e32), (_, e64)) in zip(error_E2_32, error_E2)]
 diferencia_error_Euler_h3 = [(t, abs(e32 - e64)) for ((t, e32), (_, e64)) in zip(error_E3_32, error_E3)]
 graficar_comparacion([diferencia_error_Euler_h1, diferencia_error_Euler_h2, diferencia_error_Euler_h3], ['h=1 mes', 'h=2 meses', 'h=12 meses'], 'Diferencia errores Euler')
+
+
 '''Metodo de TAYLOR de orden 2'''
 res_taylor_1 = metod_taylor_segundo_orden(f, lambda t, P: 10*(1 - 2*P/1000), t_inicial, t_final, P_inicial, h)
 res_taylor_2 = metod_taylor_segundo_orden(f, lambda t, P: 10*(1 - 2*P/1000), t_inicial, t_final, P_inicial, h_2)

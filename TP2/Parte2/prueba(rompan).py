@@ -1,3 +1,4 @@
+
 import random
 from modules.metodo import metod_taylor_segundo_orden, crear_modelo_sir
 from modules.operadores_geneticos import decode_beta_gamma, calcular_ecm, evaluar_poblacion, seleccion_ruleta, mutacion, cruzamiento
@@ -15,14 +16,14 @@ N = 100
 S0 = 990
 I0 = 10
 R0 = 0
+beta = 0.3
+gamma = 0.1
 #generamos datos "reales" usando los valores verdaderos de beta y gamma, van a ser los que el AG intente reproducir
-f_real,jac_real = crear_modelo_sir(0.3, 0.1)
+
+f_real,jac_real = crear_modelo_sir(beta, gamma)
 
 resultados = metod_taylor_segundo_orden(f_real, jac_real, a, b, [S0, I0, R0], h)
 
-#Imprimimos los resultados
-for t, estado in resultados:
-    print(f"t={t:.1f}, S={estado[0]:.2f}, I={estado[1]:.2f}, R={estado[2]:.2f}")
 
 #Verificar que el numero basico de reproduccion es R0=beta/gamma=3.0
 R0 = 0.3 / 0.1
@@ -82,53 +83,73 @@ fitness_test = 1 / (1 + ecm_test)
 print(f"Fitness con valores verdaderos (beta=0.3, gamma=0.1): {fitness_test:.4f}")
 
 print('Se integra el modelo SIR para cada individuo (β, γ)')
-
 #parametros del AG
-#estos valores los saque del final del TP no se si esta bien
 n_poblacion = 100 #cant de individuos
 L=16 #longitud del cromosoma (bits para beta + bits para gamma)
 generaciones = 50 #cant de generaciones del AG (iteraciones)
 
 #poblacion inicial (aleatoria)
 poblacion=[
-    [random.randint(0, 1) for _ in range(L)]
-    for _ in range(n_poblacion)
-]
+        [random.randint(0, 1) for _ in range(L)]
+        for _ in range(n_poblacion)
+    ]
 
 #funcion de fitness
+def evaluar_poblacion(poblacion, beta_mn, beta_mx, gamma_mn, gamma_mx):
+    '''Evalua que tan bueno es cada individuo de la poblacion'''
+    fitnesses = []
+    for cromosoma in poblacion:
+        #decodificamos el cromosoma para obtener beta y gamma
+        beta_val, gamma_val = decode_beta_gamma(cromosoma, beta_mn, beta_mx, gamma_mn, gamma_mx)
+        #creamos el modelo SIR para esos valores
+        f_individuo, jac_indiviuo = crear_modelo_sir(beta_val, gamma_val)
+        #simulamos el modelo con Taylor de orden 2
+        resultados_sim = metod_taylor_segundo_orden(f_individuo, jac_indiviuo, a, b, [S0, I0, R0], h)
+        #sacamos curva de infectados simulados
+        I_sim_totsl = [estado[1] for _, estado in resultados_sim]
+        I_sim = [I_sim_totsl[i] for i in indices] #solo los 30 puntos que tenemos de observados
+        #calculamos el ECM entre la curva simulada y la observada
+        ecm = calcular_ecm(I_sim, I_obs)
+        fitness = 1 / (1 + ecm)  #Evitamos división por cero
+        fitnesses.append(fitness)
+    return fitnesses
+
 #listas para guardar el mejor fitness y el promedio de cada generación
-mejores=[]
-promedios=[]
-print('Esperando generaciones nuevas ...')
-#bucle evolutivo del AG
-for gen in range(generaciones):
-    # print(f"Generación {gen + 1}")
-    fitnesses = evaluar_poblacion(poblacion, beta_min, beta_max, gamma_min, gamma_max, a, b, S0, I0, R0, h, indices, I_obs)
-    mejores.append(max(fitnesses))
-    promedios.append(sum(fitnesses) / len(fitnesses))
+print('Esperando generaciones nuevas...')
+def generar_mejor_Fit_y_prom(poblacion, n_poblacion, generaciones,beta_min, beta_max, gamma_min, gamma_max):
+    mejores=[]
+    promedios=[]
+    #bucle evolutivo del AG
+    for gen in range(generaciones):
+            # print(f"Generación {gen + 1}")
+        fitnesses = evaluar_poblacion(poblacion, beta_min, beta_max, gamma_min, gamma_max)
+        mejores.append(max(fitnesses))
+        promedios.append(sum(fitnesses) / len(fitnesses))
 
-    #elitismo
-    mejor_indice = fitnesses.index(max(fitnesses))
-    mejor_individuo = poblacion[mejor_indice][:]
-    
-    #seccionamos usando ruleta, aplicamos cruzamiento y mutacion para generar la nueva poblacion
-    seleccionados = seleccion_ruleta(poblacion, fitnesses, n_poblacion )
-    nueva_poblacion=[]
-    for i in range (0, n_poblacion, 2):
-        padre1=seleccionados[i]
-        padre2=seleccionados[i+1]
-        #cruzamiento de un punto
-        hijo1, hijo2 = cruzamiento(padre1, padre2)
-        #mutacion de los hijos
-        nueva_poblacion.append(mutacion(hijo1))
-        nueva_poblacion.append(mutacion(hijo2))
-    #aseguramos que el mejor individuo de la generación anterior se mantenga en la nueva población (elitismo)
-    nueva_poblacion[0]=mejor_individuo
-    #actualizamos la poblacion para la siguiente generacion
-    poblacion=nueva_poblacion
+        #elitismo
+        mejor_indice = fitnesses.index(max(fitnesses))
+        mejor_individuo = poblacion[mejor_indice][:]
+                
+        #seccionamos usando ruleta, aplicamos cruzamiento y mutacion para generar la nueva poblacion
+        seleccionados = seleccion_ruleta(poblacion, fitnesses, n_poblacion )
+        nueva_poblacion=[]
+        for i in range (0, n_poblacion, 2):
+                padre1=seleccionados[i]
+                padre2=seleccionados[i+1]
+                #cruzamiento de un punto
+                hijo1, hijo2 = cruzamiento(padre1, padre2)
+                #mutacion de los hijos
+                nueva_poblacion.append(mutacion(hijo1))
+                nueva_poblacion.append(mutacion(hijo2))
+        #aseguramos que el mejor individuo de la generación anterior se mantenga en la nueva población (elitismo)
+        nueva_poblacion[0]=mejor_individuo
+        #actualizamos la poblacion para la siguiente generacion
+        poblacion=nueva_poblacion
+    return [poblacion, mejores, promedios]
 
+poblacion_n, mejores_ind, promedios_g = generar_mejor_Fit_y_prom(poblacion, n_poblacion, generaciones,beta_min, beta_max, gamma_min, gamma_max)
 #resultados finales
-fitnesses_final = evaluar_poblacion(poblacion, beta_min, beta_max, gamma_min, gamma_max, a, b,S0, I0, R0, h, indices, I_obs )
+fitnesses_final = evaluar_poblacion(poblacion_n,beta_min, beta_max, gamma_min, gamma_max)
 #obtener el mejor individuo de final
 mejor_indice_final = fitnesses_final.index(max(fitnesses_final))
 mejor=poblacion[mejor_indice_final]
@@ -146,7 +167,7 @@ print(f"Error relativo porcentual en beta: {error_beta:.2f}%")
 print(f"Error relativo porcentual en gamma: {error_gamma:.2f}%")
 
 #grafico del AG
-graficar_modelo_AG(mejores, promedios)
+graficar_modelo_AG(mejores_ind, promedios_g)
 
 #simulacion final con beta* y gamma*
 f_final, jac_final = crear_modelo_sir(beta_final, gamma_final)
@@ -158,7 +179,6 @@ R_final = [estado[2] for _, estado in resultados_final]
 
 #grafico comparativo
 grafico_comparacion_curvas(t_final, S_final, I_final, R_final, indices, I_obs)
-
 
 '''Se busca ver como actua el algortimo AG con otros valores'''
 print('-'*50)
@@ -175,22 +195,35 @@ for i in L_vals:
     print(f'Obtenemos un error = {error_cuantizacion_min:.6f} aproximadamente')
     #se observa que para un L mas grande el error de cuantizacion minima es mas precida pero hay un piso en la precision que no va a superar AG
 
-# print('-'*50)
-# print('Analisis de efecto de ampliar rangos de busqueda')
-# # Ejecutar comparación con diferentes rangos
-# resultados = []
+print('-'*50)
+print('Analisis de efecto de ampliar rangos de busqueda')
 
-# # Caso 1: Rangos originales (estrechos)
-# caso1 = ejecutar_ag_con_rangos(0.05, 1.0, 0.01, 0.5)
-# resultados.append(caso1)
+########################################################################################################################################################################
+########################################################################################################################################################################
 
-# # Caso 2: Rangos ampliados
-# caso2 = ejecutar_ag_con_rangos(0.01, 2.0, 0.001, 1.0)
-# resultados.append(caso2)
+#Nuevos rangos para beta y gamma act 4
+beta_min_4 = 0.01
+beta_max_4 = 1.2
+gamma_min_4 = 0.005
+gamma_max_4 = 0.7
 
-# # Caso 3: Rangos muy ampliados
-# caso3 = ejecutar_ag_con_rangos(0.001, 5.0, 0.0001, 2.0)
-# resultados.append(caso3)
+fitnesses_4=evaluar_poblacion(poblacion,beta_min_4, beta_max_4, gamma_min_4, gamma_max_4)
+#Me devuelve  una lista con los mejores fitnesses de esta nueva poblacion con rangos distintos
+poblacion_4, mejores_4, promedios_4 = generar_mejor_Fit_y_prom(poblacion, n_poblacion, generaciones,beta_min_4,beta_max_4, gamma_min_4, gamma_max_4)
+#Obtenemos  los mejores fitnesses de esta nueva poblacion con rangos distintos
+fitness_final_4=evaluar_poblacion(poblacion_4,beta_min_4, beta_max_4, gamma_min_4, gamma_max_4)
+#Obtenemos el mejor individuo de esta nueva poblacion con rangos distintos
 
-# for i in resultados:
-#     print(f"Probabilidad aproximada de encontrar solución óptima por azar: {i:.2e}, en cada caso respectivamente")
+mejor_indice_final_4= fitness_final_4.index(max(fitness_final_4))
+mejor_4=poblacion_4[mejor_indice_final_4]
+#Decodificamos el mejor individuo de esta nueva poblacion con rangos distintos
+beta_final_nuevo, gamma_final_nuevo = decode_beta_gamma(mejor_4, beta_min_4, beta_max_4, gamma_min_4, gamma_max_4)
+print("\nMejor solución encontrada con rangos ampliados:")
+print(f"beta: {beta_final_nuevo:.3f}, gamma: {gamma_final_nuevo:.3f}")
+print(f"R0 = {beta_final_nuevo / gamma_final_nuevo:.2f}")
+
+#Error relativo porcentual con rangos ampliados 
+error_beta_4 = abs(beta_final_nuevo - 0.3) / 0.3 * 100
+error_gamma_4 = abs(gamma_final_nuevo - 0.1) / 0.1 * 100
+print(f"Error relativo porcentual en beta con rangos ampliados: {error_beta_4:.2f}%")
+print(f"Error relativo porcentual en gamma con rangos ampliados: {error_gamma_4:.2f}%")

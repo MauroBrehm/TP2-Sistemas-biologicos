@@ -39,7 +39,7 @@ def crear_modelo_sir(beta, gamma):
     se usa para que cada individuo del AG tenga su propio modelo'''
     def f(t, N): #sistema EDO
         S, I, R = N
-        N_total = 1000
+        N_total = 100
         dSdt = -beta * S * I / N_total
         dIdt = beta * S * I / N_total - gamma * I
         dRdt = gamma * I
@@ -48,7 +48,7 @@ def crear_modelo_sir(beta, gamma):
     #Definimos el Jacobiano para el método de Taylor
     def jacobian(t, N):
         S, I, R = N  
-        N_total = 1000
+        N_total = 100
         return [
             [-beta * I / N_total, -beta * S / N_total, 0],
             [beta * I / N_total, beta * S / N_total - gamma, 0],
