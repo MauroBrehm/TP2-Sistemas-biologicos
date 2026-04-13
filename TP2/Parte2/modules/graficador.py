@@ -1,12 +1,12 @@
 import matplotlib.pyplot as plt
 
-def graficar_modelo_AG(mejores_indiv, promedios):
+def graficar_modelo_AG(mejores_indiv, promedios, titulo="Evolución del algoritmo genético"):
     plt.plot(mejores_indiv, label='Mejor fitness')
     plt.plot(promedios, label='Fitness promedio')
     plt.xlabel('Generación')
     plt.ylabel('Fitness')
     plt.legend()
-    plt.title("Evolución del algoritmo genético")
+    plt.title(titulo)
     plt.show()
 
 def grafico_comparacion_curvas(t_final, S_final, I_final, R_final, indices, I_obs):
