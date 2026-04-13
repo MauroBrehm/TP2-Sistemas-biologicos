@@ -87,56 +87,22 @@ print('Se integra el modelo SIR para cada individuo (β, γ)')
 n_poblacion = 100 #cant de individuos
 L=16 #longitud del cromosoma (bits para beta + bits para gamma)
 generaciones = 50 #cant de generaciones del AG (iteraciones)
+ 
+"Ejecutamos el AG con la funcion correr_AG. Esta función encapsula todo el proceso evolutivo:"
+"- Inicialización de la población aleatoria"
+"- Evaluación del fitness (integrando el modelo SIR y calculando el ECM)"
+"- Selección por ruleta"
+"- Cruzamiento y mutación"
+"- Aplicación de elitismo"
+"- Iteración durante varias generaciones"
+"Finalmente, devuelve los mejores valores estimados de beta y gamma, junto con la evolución del fitness (mejor y promedio)."
 
-#poblacion inicial (aleatoria)
-poblacion=[
-    [random.randint(0, 1) for _ in range(L)]
-    for _ in range(n_poblacion)
-]
-
-#funcion de fitness
-#listas para guardar el mejor fitness y el promedio de cada generación
-mejores=[]
-promedios=[]
-print('Esperando generaciones nuevas ...')
-#bucle evolutivo del AG
-for gen in range(generaciones):
-    # print(f"Generación {gen + 1}")
-    fitnesses = evaluar_poblacion(poblacion, beta_min, beta_max, gamma_min, gamma_max, a, b, S0, I0, R0, h, indices, I_obs)
-    mejores.append(max(fitnesses))
-    promedios.append(sum(fitnesses) / len(fitnesses))
-
-    #elitismo
-    mejor_indice = fitnesses.index(max(fitnesses))
-    mejor_individuo = poblacion[mejor_indice][:]
-    
-    #seccionamos usando ruleta, aplicamos cruzamiento y mutacion para generar la nueva poblacion
-    seleccionados = seleccion_ruleta(poblacion, fitnesses, n_poblacion )
-    nueva_poblacion=[]
-    for i in range (0, n_poblacion, 2):
-        padre1=seleccionados[i]
-        padre2=seleccionados[i+1]
-        #cruzamiento de un punto
-        hijo1, hijo2 = cruzamiento(padre1, padre2)
-        #mutacion de los hijos
-        nueva_poblacion.append(mutacion(hijo1))
-        nueva_poblacion.append(mutacion(hijo2))
-    #aseguramos que el mejor individuo de la generación anterior se mantenga en la nueva población (elitismo)
-    nueva_poblacion[0]=mejor_individuo
-    #actualizamos la poblacion para la siguiente generacion
-    poblacion=nueva_poblacion
-
-#resultados finales
-fitnesses_final = evaluar_poblacion(poblacion, beta_min, beta_max, gamma_min, gamma_max, a, b,S0, I0, R0, h, indices, I_obs )
-#obtener el mejor individuo de final
-mejor_indice_final = fitnesses_final.index(max(fitnesses_final))
-mejor=poblacion[mejor_indice_final]
-
-#decodificamos el mejor individuo para obtener los valores de beta y gamma
-beta_final, gamma_final = decode_beta_gamma(mejor, beta_min, beta_max, gamma_min, gamma_max)
-print("\nMejor solución encontrada:")
-print(f"beta: {beta_final:.3f}, gamma: {gamma_final:.3f}")
-print(f"R0 = {beta_final / gamma_final:.2f}")
+beta_final, gamma_final, mejores, promedios = correr_AG(n_poblacion, generaciones, L,
+              beta_min, beta_max, gamma_min, gamma_max, a, b,
+              S0, I0, R0, h, indices, I_obs)
+print("\nMejor solución encontrada por el AG:")
+print(f"beta={beta_final:.3f}, gamma={gamma_final:.3f}")
+print(f"R0 estimado con beta* y gamma*: {beta_final/gamma_final:.2f}")
 
 #error relativo porcentual
 error_beta = abs(beta_final - 0.3) / 0.3 * 100
@@ -180,6 +146,7 @@ for L_test in [4, 8, 16]:
               beta_min=beta_min, beta_max=beta_max, gamma_min=gamma_min, gamma_max=gamma_max, a=a, b=b, 
               S0=S0, I0=I0, R0=R0, h=h, indices=indices, I_obs=I_obs  )
     print(f"Resultados para L={L_test}: beta={beta_exp:.3f}, gamma={gamma_exp:.3f}")
+print("\n--- Experimento L terminado ---\n")
 
 #Parte III act 4 b ampliar rangos de busqueda
 print('-'*50)
@@ -195,6 +162,7 @@ error_beta_4 = abs(beta_exp - 0.3) / 0.3 * 100
 error_gamma_4 = abs(gamma_exp - 0.1) / 0.1 * 100
 print(f"Error relativo porcentual en beta con rangos ampliados: {error_beta_4:.2f}%")
 print(f"Error relativo porcentual en gamma con rangos ampliados: {error_gamma_4:.2f}%")
+print("\n--- Experimento rangos ampliados terminado ---\n")
 
 # # Ejecutar comparación con diferentes rangos
 # resultados = []
@@ -226,5 +194,6 @@ for N_test in [10, 40, 100]:
               S0=S0, I0=I0, R0=R0, h=h, indices=indices, I_obs=I_obs  )
     print(f"Población N={N_test}, generaciones={generaciones_test}: beta={beta_exp:.3f}, gamma={gamma_exp:.3f}")
     graficar_modelo_AG(mejores_exp, promedios_exp, titulo=f"Evolución del AG con N={N_test}, generaciones={generaciones_test}")
+print("\n--- Experimento tamaños de población terminado ---\n")
 
 print("\nFIN DE LOS EJERCICIOS POR FIN :)")
