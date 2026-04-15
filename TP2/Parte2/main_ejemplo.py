@@ -1,9 +1,9 @@
 import random
 from sys import modules
 from modules.metodo import metod_taylor_segundo_orden, crear_modelo_sir
-from modules.operadores_geneticos import decode_beta_gamma, calcular_ecm, evaluar_poblacion, seleccion_ruleta, mutacion, cruzamiento
+from modules.operadores_geneticos import decode_beta_gamma, calcular_ecm
 from modules.graficador import graficar_modelo_AG, grafico_comparacion_curvas, graficar_vector_I
-from modules.experimentos4 import correr_AG
+from modules.alg_genetico import correr_AG
 #Implementamos Taylor de orden 2 para el modelo SIR 
 #intervalo de simulacion(dias)
 a = 0
@@ -164,23 +164,6 @@ print(f"Error relativo porcentual en beta con rangos ampliados: {error_beta_4:.2
 print(f"Error relativo porcentual en gamma con rangos ampliados: {error_gamma_4:.2f}%")
 print("\n--- Experimento rangos ampliados terminado ---\n")
 
-# # Ejecutar comparación con diferentes rangos
-# resultados = []
-
-# # Caso 1: Rangos originales (estrechos)
-# caso1 = ejecutar_ag_con_rangos(0.05, 1.0, 0.01, 0.5)
-# resultados.append(caso1)
-
-# # Caso 2: Rangos ampliados
-# caso2 = ejecutar_ag_con_rangos(0.01, 2.0, 0.001, 1.0)
-# resultados.append(caso2)
-
-# # Caso 3: Rangos muy ampliados
-# caso3 = ejecutar_ag_con_rangos(0.001, 5.0, 0.0001, 2.0)
-# resultados.append(caso3)
-
-# for i in resultados:
-#     print(f"Probabilidad aproximada de encontrar solución óptima por azar: {i:.2e}, en cada caso respectivamente")
 
 #Parte III act 4 c comparar N= 10, 40, 100
 print('-'*50)
