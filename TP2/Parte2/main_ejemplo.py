@@ -11,7 +11,7 @@ b = 60
 #paso
 h = 0.5
 #poblacion total
-N = 100
+N = 1000
 #condiciones iniciales
 S0 = 990
 I0 = 10
