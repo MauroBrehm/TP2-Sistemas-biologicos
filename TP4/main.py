@@ -1,4 +1,4 @@
-from modules.graficador import graficar_resultados
+from modules.graficador import graficar_resultados, graficar_ingreso
 from modules.metodos import metod_euler
 import sympy as sp
 import numpy as np
@@ -17,6 +17,7 @@ kt = 0.0005 #tasa de eliminacion de glucosa por parte de los tejidos en respuest
 qg = 0.1 #cantidad de glucosa ingerida por unidad de tiempo (puede ser 0 si no se ingiere nada)
 qi = 0.1 #cantidad de insulina inyectada por unidad de tiempo (puede ser 0 si no se inyecta nada)
 Gs0 = 100 #condicion inicial 
+Is0 = 0 #condicion inicial para insulina
 b = 1440 # tiempo de simulacion (1 dia en minutos)
 dt = 1 #unidad de tiempo (minuto)
 
@@ -40,12 +41,16 @@ def modelización_compartimental_Gs_Is(t, y):
     Gin = ingesta_glucosa(t)
     Iext = inyeccion_insulina(t)+0.005 #agregamos una pequeña cantidad de insulina basal para evitar que el modelo se vuelva inestable cuando Gs es muy bajo
 
-    if Gs > Gn:
+    if Gs > Gn: #si la glucosa esta por encima del nivel de referencia,
+                 # el higado reduce su secrecion de glucosa
         dIs = kp*(Gs - Gn) - Koi*Is + qi*Iext
         dGs = qg*Gin - kt*Is*Gs - Kog*Gs
-    else:
+    else:#si la glucosa esta por debajo del nivel de referencia, 
+         # el higado aumenta su secrecion de glucosa
         dIs = -Koi*Is + qi*Iext
         dGs = qg*Gin - kt*Is*Gs + kh*(Gn - Gs)
     return [dIs, dGs]
     
-simulacion = metod_euler(modelización_compartimental_Gs_Is, 0, b, [Is, Gs], dt)
+simulacion = metod_euler(modelización_compartimental_Gs_Is, 0, b, [Is0, Gs0], dt)
+graficar_resultados(simulacion, 'Modelo Compartimental Gs-Is')
+graficar_ingreso([p[0] for p in simulacion], [ingesta_glucosa(p[0]) for p in simulacion], [inyeccion_insulina(p[0]) for p in simulacion])

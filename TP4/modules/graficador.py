@@ -1,22 +1,33 @@
 import matplotlib.pyplot as plt
-import numpy as np
+
 
 
 def graficar_resultados (simulacion, labels):
     tiempos = [p[0] for p in simulacion] 
-    CD4 = [p[1][0] for p in simulacion]
-    CD8 = [p[1][1] for p in simulacion]
-    V   = [p[1][2]*10000 for p in simulacion] #copias/ml (multiplicamos para que se vea en misma escala que CD4 y CD8)
+    Gs= [p[1][0] for p in simulacion]
+    Is = [p[1][1] for p in simulacion]
+    
+    plt.plot(tiempos, Gs, label=f'Glucosa - {labels}', color='blue')
+    plt.plot(tiempos, Is, label=f'Insulina - {labels}', color='orange')
 
-    plt.plot(tiempos, CD4, label=f'CD4 - {labels}', color='purple')
-    plt.plot(tiempos, CD8, label=f'CD8 - {labels}', color='magenta')
-    plt.plot(tiempos, V, label=f'Virus - {labels}', color='red')
-
-    plt.xlabel('Tiempo (años)')
-    plt.ylabel('Población')
-    plt.title('Simulación de la dinámica del VIH')
+    plt.xlabel('Tiempo (minutos)')
+    plt.ylabel('Concentración (mg/dL para glucosa, mU/L para insulina)')
+    plt.title('Simulación de Glucosa e Insulina en Sangre')
 
     plt.ylim(0,1000)
+
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+
+#Grafica para la inyeccion de insulina y para la ingesta de glucosa
+def graficar_ingreso(tiempos, Gin, Iext):
+    plt.plot(tiempos, Gin, label='Glucosa ingerida', color='green')
+    plt.plot(tiempos, Iext, label='Insulina inyectada', color='red')
+
+    plt.xlabel('Tiempo (minutos)')
+    plt.ylabel('Cantidad (mg o mU)')
+    plt.title('Ingreso de Glucosa e Insulina')
 
     plt.legend()
     plt.grid(True)
