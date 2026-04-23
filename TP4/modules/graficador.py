@@ -14,7 +14,7 @@ def graficar_resultados (simulacion, labels):
     plt.ylabel('Concentración (mg/dL para glucosa, mU/L para insulina)')
     plt.title('Simulación de Glucosa e Insulina en Sangre')
 
-    plt.ylim(0,1000)
+    plt.ylim(0,300)
 
     plt.legend()
     plt.grid(True)
@@ -27,8 +27,8 @@ def graficar_ingreso(tiempos, Gin, Iext):
 
     plt.xlabel('Tiempo (minutos)')
     plt.ylabel('Cantidad (mg o mU)')
-    plt.title('Ingreso de Glucosa e Insulina')
-
+    plt.title('Inyección de insulina e Ingreso de Glucosa')
+    
     plt.legend()
     plt.grid(True)
     plt.show()
