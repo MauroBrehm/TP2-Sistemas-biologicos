@@ -92,9 +92,11 @@ def modelo_compartimental(t, y, parametros=parametros, diabetico=diabetico):
     #entradas externas
     Gin= ingesta_glucosa(t, parametros)
 
-    #Agrego que si es diabetico se administre insulina externa segun la funcion de inyeccion_insulina, sino solo la insulina basal para evitar que el modelo se vuelva inestable cuando Gs es muy bajo
+    #Agrego que si es diabetico se administre insulina externa segun la funcion de inyeccion_insulina,
+    # sino solo la insulina basal para evitar que el modelo se vuelva inestable cuando Gs es muy bajo
     if diabetico:
-        Iext = inyeccion_insulina(t, parametros) + parametros['insulina_basal'] #agregamos una pequeña cantidad de insulina basal para evitar que el modelo se vuelva inestable cuando Gs es muy bajo
+        Iext = inyeccion_insulina(t, parametros) + parametros['insulina_basal'] #agregamos una pequeña cantidad de 
+        #insulina basal para evitar que el modelo se vuelva inestable cuando Gs es muy bajo
     else:
         Iext = parametros['insulina_basal']  # no se administra insulina externa si no es diabetico
 
@@ -126,32 +128,3 @@ if diabetico:
 else:
     Iext = [parametros['insulina_basal'] for t in tiempos]
 graficar_ingreso(tiempos, Gin, Iext)
-                         
-
-
-
-# #Modelizamos la inyeccion de insulina como "impulsos suaves"
-# def inyeccion_insulina(t):
-#     bolo_desayuno = 5*np.exp(-(t-470)**2/(2*20**2))
-#     bolo_almuerzo = 7*np.exp(-(t-770)**2/(2*20**2))
-#     bolo_cena = 6*np.exp(-(t-1190)**2/(2*20**2))
-#     return bolo_desayuno + bolo_almuerzo + bolo_cena
-# #simulacion
-# def modelización_compartimental_Gs_Is(t, y):
-#     Is, Gs = y
-#     Gin = ingesta_glucosa(t)
-#     Iext = inyeccion_insulina(t)+0.005 #agregamos una pequeña cantidad de insulina basal para evitar que el modelo se vuelva inestable cuando Gs es muy bajo
-
-#     if Gs > Gn: #si la glucosa esta por encima del nivel de referencia,
-#                  # el higado reduce su secrecion de glucosa
-#         dIs = kp*(Gs - Gn) - Koi*Is + qi*Iext
-#         dGs = qg*Gin - kt*Is*Gs - Kog*Gs
-#     else:#si la glucosa esta por debajo del nivel de referencia, 
-#          # el higado aumenta su secrecion de glucosa
-#         dIs = -Koi*Is + qi*Iext
-#         dGs = qg*Gin - kt*Is*Gs + kh*(Gn - Gs)
-#     return [dIs, dGs]
-    
-# simulacion = metod_euler(modelización_compartimental_Gs_Is, 0, b, [Is0, Gs0], dt)
-# graficar_resultados(simulacion, 'Modelo Compartimental Gs-Is')
-# graficar_ingreso([p[0] for p in simulacion], [ingesta_glucosa(p[0]) for p in simulacion], [inyeccion_insulina(p[0]) for p in simulacion])
