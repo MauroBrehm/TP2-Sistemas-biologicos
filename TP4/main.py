@@ -3,9 +3,7 @@ from modules.metodos import metod_euler
 import sympy as sp
 import numpy as np
 
-#Parametros generales del modelo --> la idea es que si el profe nos pide modificar algo solamente toquemos estos valores 
-# y no cambiemos nada del codigo de la simulacion o de las graficas
-
+#Parametros generales del modelo
 parametros= {
     #valor de referencia de la glucosa en sangre
     'Gn': 100, #cantidad de glucosa por mililitro de sangre en ayunas
@@ -36,9 +34,9 @@ parametros= {
     
      #ingesta de glucosa: (centro, amplitud, sigma) -> podemos cambiar horarios, intensidades y ancho de pulsos
      "ingestas": [
-        (480, 80, 60),   # desayuno a las 8:00
-        (780, 120, 60),  # almuerzo a las 13:00
-        (1200, 100, 60),   # cena a las 20:00
+        (480, 80, 20),   # desayuno a las 8:00
+        (780, 120, 40),  # almuerzo a las 13:00
+        (1200, 100, 30),   # cena a las 20:00
      ],
      #inyeccion de insulina: (centro, amplitud, sigma) -> podemos cambiar horarios, intensidades y ancho de pulsos
      "inyecciones": [
@@ -48,14 +46,13 @@ parametros= {
      ],      
     }
     
-# Parámetro para indicar si el paciente es diabético
-diabetico = False  # Cambiar a True si el paciente es diabético
-    
+
 #-------------------------------------------------------
 #Funciones auxiliares para la ingesta de glucosa y la inyeccion de insulina, modelizadas como "impulsos suaves" (gaussianas)
 #----------------------------------------------------------
 
-#Modelizamos la ingesta de glucosa como "impulsos suaves"
+#Modelizamos la ingesta de glucosa como "impulsos suaves" 
+
 def pulsos (t,centro,amplitud,sigma):
     'Pulso sueva tipo gaussiano'
     'sirve para modelar tanto la ingesta de glucosa como la inyeccion de insulina, dependiendo de los parametros que le pasemos'
@@ -78,7 +75,7 @@ def inyeccion_insulina(t, parametros=parametros):
 #-----------------------------------------
 #modelo compartimental
 #------------------------------------------
-def modelo_compartimental(t, y, parametros=parametros, diabetico=diabetico):
+def modelo_compartimental(t, y, parametros=parametros, diabetico=False):
     Is, Gs = y
     Gn = parametros['Gn']
     Koi = parametros['Koi']
@@ -114,6 +111,8 @@ def modelo_compartimental(t, y, parametros=parametros, diabetico=diabetico):
 #----------------------------------------
 #ejecutamos la simulacion
 #------------------------------------------
+diabetico = False
+#Simulamos el modelo compartimental para un individuo sano
 simulacion = metod_euler(lambda t, y: modelo_compartimental(t, y, parametros, diabetico), 
                         parametros['a'], parametros['b'], [parametros['Is0'], 
                         parametros['Gs0']], parametros['dt'])
@@ -123,8 +122,31 @@ graficar_resultados(simulacion, 'Modelo Compartimental Gs-Is')
 #grafica de entradas externas
 tiempos = [p[0] for p in simulacion]
 Gin = [ingesta_glucosa(t, parametros) for t in tiempos]
+<<<<<<< HEAD
 if diabetico:
     Iext = [inyeccion_insulina(t, parametros) + parametros['insulina_basal'] for t in tiempos]
 else:
     Iext = [parametros['insulina_basal'] for t in tiempos]
 graficar_ingreso(tiempos, Gin, Iext)
+=======
+Iext = [parametros['insulina_basal'] for t in tiempos]
+graficar_ingreso(tiempos, Gin, Iext, 'Sano')
+
+
+#simulacion diabetico
+#para que el modelo represente a un individuo enfermo de diabetes tipo 1 se baja el valor de Kp=0.001, que representa la capacidad del pancreas para secretar insulina en respuesta a la glucosa.
+#para simular diabetes tipo 2 se reduce el valor de kt=0.000005, que es la capacidad de los tejidos de absover la glucosa
+diabetico = True
+simulacion = metod_euler(lambda t, y: modelo_compartimental(t, y, parametros, diabetico), 
+                        parametros['a'], parametros['b'], [parametros['Is0'], 
+                        parametros['Gs0']], parametros['dt'])
+#graficamos resultados
+graficar_resultados(simulacion, 'Modelo Compartimental Gs-Is - Diabetico')
+
+#grafica de entradas externas
+tiempos_d = [p[0] for p in simulacion]
+Gin_d = [ingesta_glucosa(t, parametros) for t in tiempos_d]
+
+Iext = [inyeccion_insulina(t, parametros) + parametros['insulina_basal'] for t in tiempos_d]
+graficar_ingreso(tiempos_d, Gin_d, Iext, 'Diabetico')
+>>>>>>> c03c916b72854b90430878d8de3c760aeecf48a2
