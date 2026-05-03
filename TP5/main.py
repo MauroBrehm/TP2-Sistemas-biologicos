@@ -70,3 +70,15 @@ def equilibrio (beta_h,gamma_h,beta_m,gamma_m):
         resultados['endemico'] = None
 
     return resultados
+#Modelo de malaria con recuperados que tiene menor tasa de reinfectarse(beta_r) y perdida de inmunidad parcial
+def modelo_malaria_recuperados (y,t,beta_h,gamma_h,beta_m,gamma_m,beta_r,w):
+    i,a,r=y #proporcion de humanos infectados, mosquitos infectados y humanos recuperados
+
+    di_dt= beta_h*(1 - i - r)*a - gamma_h*i + beta_r*a*r
+    '(1-i-r) = s --> proporcion humanos sanos/suceptibles'
+
+    da_dt= beta_m*(1 - a)*i - gamma_m*a
+    '(1-a) = v --> proporcion mosquitos sanos'
+
+    dr_dt = gamma_h * i - beta_r * a * r -w*r #tasa a la que los humanos se recuperan
+    return [di_dt,da_dt,dr_dt]
