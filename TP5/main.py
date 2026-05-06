@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.linalg import eigvals
+from modules.graficador import graficar_resultados
 from scipy.integrate import odeint #scipy es una biblioteca de Python para cálculos científicos,
 #y odeint es una función que resuelve sistemas de EDOs.
 #podesmos hacerlo con euler tambien pero es mas lento y menos preciso, es mas facil con esta funcion
@@ -10,6 +11,11 @@ beta_h = 1 #tasa a la que los mosquitos infectados contagian personas
 gamma_h=0.4 # tasa a la que las personas se curan
 beta_m = 1 #tasa a la que las personas infectadas contagian mosquitos
 gamma_m=2 #tasa a la que los mosquitos se curan o mueren
+
+#condiciones iniciales
+i0=0.1 #humanos infectados (entre 0 y 1)
+a0=0.1 #mosquitos infectados (entre 0 y 1)
+y0=[i0,a0]
 
 #sistema de ecuaciones diferenciales
 def modelo_malaria (y,t,beta_h,gamma_h,beta_m,gamma_m):
@@ -28,10 +34,6 @@ def modelo_malaria (y,t,beta_h,gamma_h,beta_m,gamma_m):
 '-Los mosquitos se infectan cuando pican a un humano infectado (i) y el mosquito estaba sano (1−a), con tasa βm'
 '-Los mosquitos se curan con tasa γm'
 
-#condiciones iniciales
-i0=0.1 #humanos infectados (entre 0 y 1)
-a0=0.1 #mosquitos infectados (entre 0 y 1)
-y0=[i0,a0]
 
 def equilibrio (beta_h,gamma_h,beta_m,gamma_m):
     'Calcula el punto de equilibrio del sistema'
@@ -70,7 +72,9 @@ def equilibrio (beta_h,gamma_h,beta_m,gamma_m):
         resultados['endemico'] = None
 
     return resultados
+
 #Modelo de malaria con recuperados que tiene menor tasa de reinfectarse(beta_r) y perdida de inmunidad parcial
+# w es la tasa a la que los humanos recuperados pierden su inmunidad y vuelven a ser susceptibles
 def modelo_malaria_recuperados (y,t,beta_h,gamma_h,beta_m,gamma_m,beta_r,w):
     i,a,r=y #proporcion de humanos infectados, mosquitos infectados y humanos recuperados
 
@@ -82,3 +86,27 @@ def modelo_malaria_recuperados (y,t,beta_h,gamma_h,beta_m,gamma_m,beta_r,w):
 
     dr_dt = gamma_h * i - beta_r * a * r -w*r #tasa a la que los humanos se recuperan
     return [di_dt,da_dt,dr_dt]
+
+
+def simular_varias_ci(condiciones, modelo, tiempo, parametros):
+    """Simula el modelo para varias condiciones iniciales y grafica cada caso."""
+    for cond in condiciones:
+        y0_cond = [cond['i0'], cond['a0']]
+        solucion = odeint(modelo, y0_cond, tiempo, args=parametros)
+        etiqueta = f"{cond['label']} (i0={cond['i0']}, a0={cond['a0']})"
+        graficar_resultados((tiempo, solucion), etiqueta)
+
+# simulación del modelo
+tiempo = np.linspace(0, 100) #tiempo de simulacion de 100 años
+
+#se plantean distintas condiciones iniciales que representan causas que provocan brotes de malaria
+condiciones_iniciales = [
+    {'label': 'Baja infección inicial', 'i0': 0.01, 'a0': 0.05},
+    {'label': 'Bajo acceso sanitario', 'i0': 0.05, 'a0': 0.20},
+    {'label': 'Alta densidad de Mosquitos', 'i0': 0.02, 'a0': 0.40},
+    {'label': 'Brotes recurrentes por movilidad poblacional', 'i0': 0.5, 'a0': 0.15}
+]
+simulacion = odeint(modelo_malaria, y0, tiempo, args=(beta_h, gamma_h, beta_m, gamma_m))
+graficar_resultados((tiempo, simulacion), 'Simulación del modelo de malaria')
+
+simular_varias_ci(condiciones_iniciales, modelo_malaria, tiempo, (beta_h, gamma_h, beta_m, gamma_m))
