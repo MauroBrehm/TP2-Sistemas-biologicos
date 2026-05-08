@@ -22,20 +22,24 @@ y0=[i0,a0]
 #=====================================================================
 
 #sistema de ecuaciones diferenciales --> modelo SIS (Suceptibles-Infectados-Susceptibles)
-def modelo_malaria (y,t,beta_h,gamma_h,beta_m,gamma_m):
-    i,a=y #proporcion de humanos infectados y mosquitos infectados
+def modelo_malaria (y,t,beta_h,gamma_h,beta_m,gamma_m,gama_h,gama_m):
+    i,a,s,v=y #proporcion de humanos infectados y mosquitos infectados
 
     di_dt= beta_h*(1 - i)*a - gamma_h*i
     '(1-i) = s --> proporcion humanos sanos/suceptibles'
     'beta_h*(1 - i)*a --> cuantos humanos se infectan por dia'
     'gamma_h*i --> cuantos humanos se curan por dia'
 
+    ds_dt= gama_h*i- beta_h*s # humanos susceptibles que pierden inmunidad y se vuelven susceptibles de nuevo, menos los que se infectan
+    
+    dv_dt= gama_m*a- beta_m*v # mosquitos sanos que pierden inmunidad y se vuelven susceptibles de nuevo, menos los que se infectan
+
     da_dt= beta_m*(1 - a)*i - gamma_m*a
     '(1-a) = v --> proporcion mosquitos sanos'
     'beta_m*(1 - a)*i --> cuantos mosquitos se infectan por dia'
     'gamma_m*a --> cuantos mosquitos se curan o mueren por dia'
 
-    return [di_dt,da_dt]
+    return [di_dt,da_dt,ds_dt,dv_dt]
 
 'Interpretacion del modelo:'
 '-Los humanos se infectan cuando un mosquito infectado (a) pica a un humano sano (1−i), con tasa βh'
@@ -119,6 +123,8 @@ def modelo_malaria_recuperados (y,t,beta_h,gamma_h,beta_m,gamma_m,beta_r,w):
     
     da_dt= beta_m*(1 - a)*i - gamma_m*a
     
+    ds_dt= w*r - beta_h*s*a # humanos susceptibles que pierden inmunidad y se vuelven susceptibles de nuevo, menos los que se infectan
+
     dr_dt = gamma_h * i - beta_r * a * r - w * r #tasa a la que los humanos se recuperan
     return [di_dt,da_dt,dr_dt]
 
