@@ -61,7 +61,7 @@ def graficar_varias_ci(resultados, equilibrio):
         sol = res['solucion']
         i = sol[:, 0]
         a = sol[:, 1]
-        s = 1 - i   # humanos sanos
+        s = 1 - i  # humanos sanos
         v = 1 - a   # mosquitos sanos
  
         ax.plot(t, i, color='steelblue', label='i(t) humanos')

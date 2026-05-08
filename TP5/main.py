@@ -12,8 +12,8 @@ beta_m = 1 #tasa a la que las personas infectadas contagian mosquitos
 gamma_m=2 #tasa a la que los mosquitos se curan o mueren
 
 #condiciones iniciales
-i0=0.1 #humanos infectados al inicio (entre 0 y 1)
-a0=0.1 #mosquitos infectados al inicio (entre 0 y 1)
+i0=0.1 #humanos infectados al inicio (entre 0 y 1 --> 0 = nadie infectado, 1 = toda la población infectada)
+a0=0.1 #mosquitos infectados al inicio (entre 0 y 1 --> 0 = nadie infectado, 1 = toda la población infectada)
 y0=[i0,a0]
 
 
@@ -68,8 +68,7 @@ def equilibrio (beta_h,gamma_h,beta_m,gamma_m):
 
     #Punto de equilibrio endémico --> se calcula resolviendo el sistema en equilibrio
     if R0 > 1:
-        i_star =(beta_h * beta_m - gamma_h * gamma_m) / (beta_h * beta_m + beta_h * gamma_m + beta_m * gamma_h)
-
+        i_star = (beta_h * beta_m - gamma_h * gamma_m) / (beta_m * (beta_h + gamma_h))  
         #una vez que tenemos i* podemos calcular a* despejando di/dt=0
         a_star = (gamma_h * i_star) / (beta_h * (1 - i_star))
         
@@ -165,12 +164,12 @@ def mortalidad_estacional(t, gamma_m, u, t_seca =90, k=0.3):
         k: que tan rapido es el cambio de la mortalidad (k más alto = cambio más abrupto)
     '''
 
-    return gamma_m * u / (1 + np.exp(-k * (t - t_seca)))
+    return gamma_m + u / (1 + np.exp(-k * (t - t_seca)))
 
-def modelo_malaria_estacional(y, t, beta_h, gamma_h, beta_m, gamma_m, u, periodo=1.0, duracion_humeda=0.75):
+def modelo_malaria_estacional(y, t, beta_h, gamma_h, beta_m, gamma_m, u, t_seca=90, k=0.3):
     '''Modelo de malaria con mortalidad estacional de mosquitos'''
     i, a = y
-    gamma_m_t = mortalidad_estacional(t, gamma_m, u, periodo, duracion_humeda)
+    gamma_m_t = mortalidad_estacional(t, gamma_m, u, t_seca, k)
 
     di_dt = beta_h * (1 - i) * a - gamma_h * i
     da_dt = beta_m * (1 - a) * i - gamma_m_t * a
