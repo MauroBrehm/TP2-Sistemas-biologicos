@@ -22,24 +22,20 @@ y0=[i0,a0]
 #=====================================================================
 
 #sistema de ecuaciones diferenciales --> modelo SIS (Suceptibles-Infectados-Susceptibles)
-def modelo_malaria (y,t,beta_h,gamma_h,beta_m,gamma_m,gama_h,gama_m):
-    i,a,s,v=y #proporcion de humanos infectados y mosquitos infectados
+def modelo_malaria (y,t,beta_h,gamma_h,beta_m,gamma_m):
+    i,a=y #proporcion de humanos infectados y mosquitos infectados
 
     di_dt= beta_h*(1 - i)*a - gamma_h*i
     '(1-i) = s --> proporcion humanos sanos/suceptibles'
     'beta_h*(1 - i)*a --> cuantos humanos se infectan por dia'
     'gamma_h*i --> cuantos humanos se curan por dia'
 
-    ds_dt= gama_h*i- beta_h*s # humanos susceptibles que pierden inmunidad y se vuelven susceptibles de nuevo, menos los que se infectan
-    
-    dv_dt= gama_m*a- beta_m*v # mosquitos sanos que pierden inmunidad y se vuelven susceptibles de nuevo, menos los que se infectan
-
     da_dt= beta_m*(1 - a)*i - gamma_m*a
     '(1-a) = v --> proporcion mosquitos sanos'
     'beta_m*(1 - a)*i --> cuantos mosquitos se infectan por dia'
     'gamma_m*a --> cuantos mosquitos se curan o mueren por dia'
 
-    return [di_dt,da_dt,ds_dt,dv_dt]
+    return [di_dt,da_dt]
 
 'Interpretacion del modelo:'
 '-Los humanos se infectan cuando un mosquito infectado (a) pica a un humano sano (1−i), con tasa βh'
@@ -72,7 +68,7 @@ def equilibrio (beta_h,gamma_h,beta_m,gamma_m):
 
     #Punto de equilibrio endémico --> se calcula resolviendo el sistema en equilibrio
     if R0 > 1:
-        i_star =(beta_h * beta_m - gamma_h * gamma_m) / (beta_h * beta_m + gamma_h * beta_m)
+        i_star =(beta_h * beta_m - gamma_h * gamma_m) / (beta_h * beta_m + beta_h * gamma_m + beta_m * gamma_h)
 
         #una vez que tenemos i* podemos calcular a* despejando di/dt=0
         a_star = (gamma_h * i_star) / (beta_h * (1 - i_star))
@@ -117,13 +113,13 @@ def simular_varias_ci(condiciones, modelo, tiempo, parametros, equilibrio_endemi
 def modelo_malaria_recuperados (y,t,beta_h,gamma_h,beta_m,gamma_m,beta_r,w):
     i,a,r=y #proporcion de humanos infectados, mosquitos infectados y humanos recuperados
 
-    s=1 - i - r #proporcion de humanos susceptibles
+    s= 1 - i + r #proporcion de humanos susceptibles
    
-    di_dt= beta_h*s*a - gamma_h*i + beta_r*a*r
+    di_dt= beta_h * s * a - gamma_h * i + beta_r * a * r 
     
-    da_dt= beta_m*(1 - a)*i - gamma_m*a
+    da_dt= beta_m * (1 - a) * i - gamma_m * a
     
-    ds_dt= w*r - beta_h*s*a # humanos susceptibles que pierden inmunidad y se vuelven susceptibles de nuevo, menos los que se infectan
+    ds_dt= w * r - beta_h * s * a # humanos susceptibles que pierden inmunidad y se vuelven susceptibles de nuevo, menos los que se infectan
 
     dr_dt = gamma_h * i - beta_r * a * r - w * r #tasa a la que los humanos se recuperan
     return [di_dt,da_dt,dr_dt]
@@ -162,14 +158,14 @@ def modelo_malaria_latencia (y, t, beta_h, gamma_h, beta_m, gamma_m, sigma):
 #=====================================================================
 #ejercicio 5 - C
 #=====================================================================
-def mortalidad_estacional(t, gamma_m, u, periodo=1.0, duracion_humeda=0.75):
+def mortalidad_estacional(t, gamma_m, u, t_seca =90, k=0.3):
     '''Mortandad de mosquitos que aumenta después del fin de la estación húmeda
         u: aumento de mortalidad en estaciones secas
+        t_seca: día en que comienza la estación seca
+        k: que tan rapido es el cambio de la mortalidad (k más alto = cambio más abrupto)
     '''
-    fase = t % periodo
-    if fase >= duracion_humeda:
-        return gamma_m + u
-    return gamma_m
+
+    return gamma_m * u / (1 + np.exp(-k * (t - t_seca)))
 
 def modelo_malaria_estacional(y, t, beta_h, gamma_h, beta_m, gamma_m, u, periodo=1.0, duracion_humeda=0.75):
     '''Modelo de malaria con mortalidad estacional de mosquitos'''
@@ -210,15 +206,15 @@ beta_p = 0.1
 gamma_p = 0.2 
 simulacion_plasmido = odeint(modelo_malaria_plasmido, [i0, 0, a0], #i=0.1, a=0 (ninguno infeccioso), p=0.1 
                              tiempo, args=(beta_h, gamma_h, beta_m, gamma_m, beta_p, gamma_p))
-graficar_resultados_dist((tiempo, simulacion_plasmido), ['Modelo con período de latencia del plasmido en el mosquito', 'Mosquitos con plasmido inmaduro p(t)'])
+graficar_resultados_dist((tiempo, simulacion_plasmido), ['Ejercicio 5 - A: Modelo con período de latencia del plasmido en el mosquito', 'Mosquitos con plasmido inmaduro p(t)'])
 
 #simulacion del modelo con periodo latencia (humano infectado pero no contagia)
 sigma = 0.3
 simulacion_latencia = odeint(modelo_malaria_latencia, [i0,a0, 0], #i=0.1, a=0.1, e=0 (nadie incubando al inicio)
                               tiempo, args = (beta_h, gamma_h, beta_m, gamma_m, sigma))
-graficar_resultados_dist((tiempo, simulacion_latencia), ['Modelo con período de incubación en humanos', 'Humanos expuestos e(t)'])
+graficar_resultados_dist((tiempo, simulacion_latencia), ['Ejercicio 5 - B: Modelo con período de incubación en humanos', 'Humanos expuestos e(t)'])
 
 #simulacion del modelo considerando la mortalidad estacional de los mosquitos
 u = 0.5
 simulacion_estacional = odeint(modelo_malaria_estacional, y0, tiempo, args=(beta_h, gamma_h, beta_m, gamma_m, u))
-graficar_resultados((tiempo, simulacion_estacional), 'Modelo con mortalidad estacional de mosquitos al final de la estación húmeda')
+graficar_resultados((tiempo, simulacion_estacional), 'Ejercicio 5 - C: Modelo con mortalidad estacional de mosquitos al final de la estación húmeda')

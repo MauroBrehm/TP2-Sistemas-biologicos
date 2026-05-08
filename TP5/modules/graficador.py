@@ -5,8 +5,8 @@ def graficar_resultados(datos, labels):
     tiempo, solucion = datos
     i = solucion[:, 0]  # Humanos infectados
     a = solucion[:, 1]  # Mosquitos infectados
-    s = 1 - i           # humanos sanos (s = 1 - i)
-    v = 1 - a           # mosquitos sanos (v = 1 - a)
+    s = 1 - i           # humanos sanos/suceptibles (s = 1 - i)
+    v = 1 - a           # mosquitos sanos/ suceptibles (v = 1 - a)
     
     fig, ax = plt.subplots(figsize=(9, 5))
 
@@ -15,7 +15,7 @@ def graficar_resultados(datos, labels):
     ax.plot(tiempo, s, label=f'Humanos sanos s(t)', color='lightgreen')
     ax.plot(tiempo, v, label=f'Mosquitos sanos v(t)', color='orange' )
 
-    ax.set_ylim(0, 1) #tiene que ir de 0 a 1 porque son proporciones de la población total
+    ax.set_ylim(-0.2, 1.2) #tiene que ir de 0 a 1 porque son proporciones de la población total
     ax.set_xlabel('Tiempo (dias)')
     ax.set_ylabel('Proporción de la población')
     ax.set_title(f'{labels}')
@@ -31,17 +31,17 @@ def graficar_resultados_dist ( simulacion, labels):
     i = solucion[:, 0]  # Humanos infectados
     a = solucion[:, 1]  # Mosquitos infectados
     r = solucion[:, 2]  #Tercer compartimento (expuestos, recuperados o plasmidos)
-    s=1-i-r # humanos sanos 
+    s=1-i+r # humanos sanos 
     v=1-a # mosquitos sanos 
 
     fig, ax = plt.subplots(figsize=(9, 5))
     ax.plot(tiempo, i, label=f'Humanos infectados i(t)', color='steelblue')
     ax.plot(tiempo, a, label=f'Mosquitos infectados a(t)', color='deeppink')
     ax.plot(tiempo, r, label=f'{labels[1]}', color='lightgreen')
-    ax.plot(tiempo, s, label=f'Humanos sanos s(t)', color='lightgray')
+    ax.plot(tiempo, s, label=f'Humanos sanos s(t)', color='purple')
     ax.plot(tiempo, v, label=f'Mosquitos sanos v(t)', color='orange')
 
-    ax.set_ylim(0, 1) #tiene que ir de 0 a 1 porque son proporciones de la población total
+    ax.set_ylim(-0.2, 1.2) #tiene que ir de 0 a 1 porque son proporciones de la población total
     ax.set_xlabel('Tiempo (dias)')
     ax.set_ylabel('Proporción de la población')   
     ax.set_title(f'{labels[0]}')
@@ -72,7 +72,7 @@ def graficar_varias_ci(resultados, equilibrio):
         ax.set_title(res['label'], fontsize=10)
         ax.set_xlabel('Tiempo (días)')
         ax.set_ylabel('Proporción')
-        ax.set_ylim(0, 1)
+        ax.set_ylim(-0.2, 1.2)
         ax.legend()
         ax.grid(True)
  
