@@ -112,7 +112,7 @@ def simular_varias_ci(condiciones, modelo, tiempo, parametros, equilibrio_endemi
 def modelo_malaria_recuperados (y,t,beta_h,gamma_h,beta_m,gamma_m,beta_r,w):
     i,a,r=y #proporcion de humanos infectados, mosquitos infectados y humanos recuperados
 
-    s= 1 - i + r #proporcion de humanos susceptibles
+    s= 1 - i - r #proporcion de humanos susceptibles
    
     di_dt= beta_h * s * a - gamma_h * i + beta_r * a * r 
     
@@ -133,7 +133,7 @@ def modelo_malaria_plasmido (y, t, beta_h, gamma_h, beta_m, gamma_m, beta_p, gam
     da_dt = beta_p *  p - gamma_m * a 
     'beta_p * p --> los mosquitos con plasmido inmaduro que maduran y se vuelven infecciosos'
     'gamma_m * a --> los mosquitos infectados que se curan o mueren'
-    dp_dt = beta_m * (1 - p)* i - gamma_p * p - beta_p * p
+    dp_dt = beta_m * (1 - a - p)* i - gamma_p * p - beta_p * p
     return [di_dt, da_dt, dp_dt]
 
 #=====================================================================
@@ -203,7 +203,8 @@ simular_varias_ci(condiciones_iniciales, modelo_malaria, tiempo, (beta_h, gamma_
 #simulacion del modelo con vector con plasmido inmaduro
 beta_p = 0.1 
 gamma_p = 0.2 
-simulacion_plasmido = odeint(modelo_malaria_plasmido, [i0, 0, a0], #i=0.1, a=0 (ninguno infeccioso), p=0.1 
+p0= 0.1 #mosquitos con plasmido inmaduro al inicio (entre 0 y 1)
+simulacion_plasmido = odeint(modelo_malaria_plasmido, [i0, 0, p0], #i=0.1, a=0 (ninguno infeccioso), p=0.1 
                              tiempo, args=(beta_h, gamma_h, beta_m, gamma_m, beta_p, gamma_p))
 graficar_resultados_dist((tiempo, simulacion_plasmido), ['Ejercicio 5 - A: Modelo con período de latencia del plasmido en el mosquito', 'Mosquitos con plasmido inmaduro p(t)'])
 

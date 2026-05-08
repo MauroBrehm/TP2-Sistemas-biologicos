@@ -31,7 +31,7 @@ def graficar_resultados_dist ( simulacion, labels):
     i = solucion[:, 0]  # Humanos infectados
     a = solucion[:, 1]  # Mosquitos infectados
     r = solucion[:, 2]  #Tercer compartimento (expuestos, recuperados o plasmidos)
-    s=1-i+r # humanos sanos 
+    s=1-i-r # humanos sanos 
     v=1-a # mosquitos sanos 
 
     fig, ax = plt.subplots(figsize=(9, 5))
