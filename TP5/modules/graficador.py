@@ -78,3 +78,32 @@ def graficar_varias_ci(resultados, equilibrio):
  
     plt.tight_layout()
     plt.show()
+
+def graficar_comparacion(resultados):
+    """Grafica la comparación entre modelos con distintas estructuras."""
+    fig, ax = plt.subplots(figsize=(10, 6))
+    for res in resultados:
+        t = res['tiempo']
+        sol = res['solucion']
+        i = sol[:, 0]
+        a = sol[:, 1]
+        s = 1 - i  # humanos sanos
+        v = 1 - a   # mosquitos sanos
+        e = sol[:, 2]
+        p = sol[:, 3]
+
+        ax.plot(t, i, label=' i(t)', linestyle='-', color='steelblue')
+        ax.plot(t, a, label='a(t)', linestyle='--', color='deeppink')
+        ax.plot(t, s, label=' s(t)', linestyle='-.', color='lightgreen')
+        ax.plot(t, v, label='v(t)', linestyle=':', color='orange')
+        ax.plot(t, e, label='e(t)', linestyle='-', color='purple')
+        ax.plot(t, p, label='p(t)', linestyle='--', color='red')
+
+    ax.set_title('Comparación de modelos con distintas estructuras')
+    ax.set_xlabel('Tiempo (dias)')
+    ax.set_ylabel('Proporción')
+    ax.set_ylim(-0.2, 1.2)
+    ax.legend()
+    ax.grid(True)
+    plt.tight_layout()
+    plt.show()

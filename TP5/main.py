@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.linalg import eigvals
-from modules.graficador import graficar_resultados, graficar_resultados_dist, graficar_varias_ci
+from modules.graficador import graficar_resultados, graficar_resultados_dist, graficar_varias_ci, graficar_comparacion
 from scipy.integrate import odeint #scipy es una biblioteca de Python para cálculos científicos,
 #y odeint es una función que resuelve sistemas de EDOs.
 #podesmos hacerlo con euler tambien pero es mas lento y menos preciso, es mas facil con esta funcion
@@ -15,7 +15,6 @@ gamma_m=2 #tasa a la que los mosquitos se curan o mueren
 i0=0.1 #humanos infectados al inicio (entre 0 y 1 --> 0 = nadie infectado, 1 = toda la población infectada)
 a0=0.1 #mosquitos infectados al inicio (entre 0 y 1 --> 0 = nadie infectado, 1 = toda la población infectada)
 y0=[i0,a0]
-
 
 #=====================================================================
 #ejercicio 1
@@ -112,13 +111,11 @@ def simular_varias_ci(condiciones, modelo, tiempo, parametros, equilibrio_endemi
 def modelo_malaria_recuperados (y,t,beta_h,gamma_h,beta_m,gamma_m,beta_r,w):
     i,a,r=y #proporcion de humanos infectados, mosquitos infectados y humanos recuperados
 
-    s= 1 - i - r #proporcion de humanos susceptibles
+    s= 1 - i - r #proporcion de humanos susceptibles ( ds_dt= w * r - beta_h * s * a )
    
     di_dt= beta_h * s * a - gamma_h * i + beta_r * a * r 
     
     da_dt= beta_m * (1 - a) * i - gamma_m * a
-    
-    ds_dt= w * r - beta_h * s * a # humanos susceptibles que pierden inmunidad y se vuelven susceptibles de nuevo, menos los que se infectan
 
     dr_dt = gamma_h * i - beta_r * a * r - w * r #tasa a la que los humanos se recuperan
     return [di_dt,da_dt,dr_dt]
@@ -133,7 +130,7 @@ def modelo_malaria_plasmido (y, t, beta_h, gamma_h, beta_m, gamma_m, beta_p, gam
     da_dt = beta_p *  p - gamma_m * a 
     'beta_p * p --> los mosquitos con plasmido inmaduro que maduran y se vuelven infecciosos'
     'gamma_m * a --> los mosquitos infectados que se curan o mueren'
-    dp_dt = beta_m * (1 - a - p)* i - gamma_p * p - beta_p * p
+    dp_dt = beta_m * (1 - a - p)* i - beta_p * p
     return [di_dt, da_dt, dp_dt]
 
 #=====================================================================
@@ -157,28 +154,35 @@ def modelo_malaria_latencia (y, t, beta_h, gamma_h, beta_m, gamma_m, sigma):
 #=====================================================================
 #ejercicio 5 - C
 #=====================================================================
-def mortalidad_estacional(t, gamma_m, u, t_seca =90, k=0.3):
-    '''Mortandad de mosquitos que aumenta después del fin de la estación húmeda
-        u: aumento de mortalidad en estaciones secas
-        t_seca: día en que comienza la estación seca
-        k: que tan rapido es el cambio de la mortalidad (k más alto = cambio más abrupto)
+def mortalidad_estacional(t, gamma_m, u, periodo=365):
+    '''Mortandad de mosquitos con ciclo estacional periódico (6 meses fríos, 6 meses cálidos)
+        gamma_m: tasa base de mortalidad
+        u: aumento de mortalidad durante estaciones frías
+        periodo: días en un año (365)
     '''
+    # Usar coseno negativo para crear ciclo: 
+    # máximo en t=0, 182.5, 365... (estaciones frías)
+    # mínimo en t=91.25, 273.75... (estaciones cálidas)
+    ciclo = -np.cos(2 * np.pi * t / periodo)  # Varía de -1 a 1
+    factor = (ciclo + 1) / 2  # Normaliza a 0-1 (0=mortalidad base, 1=máxima)
+    
+    return gamma_m + u * factor
 
-    return gamma_m + u / (1 + np.exp(-k * (t - t_seca)))
+def modelo_malaria_estacional(y, t, beta_h, gamma_h, beta_m, gamma_m, u, sigma, beta_p, periodo=365):
+    '''Modelo de malaria con mortalidad estacional periódica de mosquitos'''
+    i, a, e, p = y
+    gamma_m_t = mortalidad_estacional(t, gamma_m, u, periodo)
+    de_dt = beta_h * (1 - i - e) * a - sigma * e 
+    di_dt = sigma * e - gamma_h * i
+    da_dt = beta_p * p - gamma_m_t * a
+    dp_dt = beta_m * (1 - a - p)* i - beta_p * p
 
-def modelo_malaria_estacional(y, t, beta_h, gamma_h, beta_m, gamma_m, u, t_seca=90, k=0.3):
-    '''Modelo de malaria con mortalidad estacional de mosquitos'''
-    i, a = y
-    gamma_m_t = mortalidad_estacional(t, gamma_m, u, t_seca, k)
-
-    di_dt = beta_h * (1 - i) * a - gamma_h * i
-    da_dt = beta_m * (1 - a) * i - gamma_m_t * a
-    return [di_dt, da_dt]
+    return [di_dt, da_dt, de_dt, dp_dt]
 
 #=====================================================================
 #simulaciones
 #=====================================================================
-tiempo = np.linspace(0, 120, 1000) #tiempo de simulacion de 120 dias
+tiempo = np.linspace(0, 5) #tiempo de simulacion de 120 dias
 simulacion = odeint(modelo_malaria, y0, tiempo, args=(beta_h, gamma_h, beta_m, gamma_m))
 graficar_resultados((tiempo, simulacion), 'Simulación modelo SIS de malaria')
 
@@ -192,29 +196,36 @@ if eq['Punto_endemico']:
           f"estable: {eq['Punto_endemico']['estable']}")
 
 #se plantean distintas condiciones iniciales que representan causas que provocan brotes de malaria
-condiciones_iniciales = [
-    {'label': 'Baja infección inicial', 'i0': 0.01, 'a0': 0.05},
-    {'label': 'Bajo acceso sanitario', 'i0': 0.05, 'a0': 0.20},
-    {'label': 'Alta densidad de mosquitos', 'i0': 0.02, 'a0': 0.40},
-    {'label': 'Brotes recurrentes por movilidad poblacional', 'i0': 0.50, 'a0': 0.15}
-]
-simular_varias_ci(condiciones_iniciales, modelo_malaria, tiempo, (beta_h, gamma_h, beta_m, gamma_m), eq['Punto_endemico'])
+# condiciones_iniciales = [
+#     {'label': 'Baja infección inicial', 'i0': 0.01, 'a0': 0.05},
+#     {'label': 'Bajo acceso sanitario', 'i0': 0.05, 'a0': 0.20},
+#     {'label': 'Alta densidad de mosquitos', 'i0': 0.02, 'a0': 0.40},
+#     {'label': 'Brotes recurrentes por movilidad poblacional', 'i0': 0.50, 'a0': 0.15}
+# ]
+# simular_varias_ci(condiciones_iniciales, modelo_malaria, tiempo, (beta_h, gamma_h, beta_m, gamma_m), eq['Punto_endemico'])
 
 #simulacion del modelo con vector con plasmido inmaduro
-beta_p = 0.1 
-gamma_p = 0.2 
-p0= 0.1 #mosquitos con plasmido inmaduro al inicio (entre 0 y 1)
-simulacion_plasmido = odeint(modelo_malaria_plasmido, [i0, 0, p0], #i=0.1, a=0 (ninguno infeccioso), p=0.1 
-                             tiempo, args=(beta_h, gamma_h, beta_m, gamma_m, beta_p, gamma_p))
-graficar_resultados_dist((tiempo, simulacion_plasmido), ['Ejercicio 5 - A: Modelo con período de latencia del plasmido en el mosquito', 'Mosquitos con plasmido inmaduro p(t)'])
+# beta_p = 0.1 
+# gamma_p = 0.2 
+# p0= 0 #mosquitos con plasmido inmaduro al inicio (entre 0 y 1)
+# simulacion_plasmido = odeint(modelo_malaria_plasmido, [i0, 0.1, p0], #i=0.1, a=0 (ninguno infeccioso), p=0.1 
+#                              tiempo, args=(beta_h, gamma_h, beta_m, gamma_m, beta_p, gamma_p))
+# graficar_resultados_dist((tiempo, simulacion_plasmido), ['Ejercicio 5 - A: Modelo con período de latencia del plasmido en el mosquito', 'Mosquitos con plasmido inmaduro p(t)'])
 
-#simulacion del modelo con periodo latencia (humano infectado pero no contagia)
-sigma = 0.3
-simulacion_latencia = odeint(modelo_malaria_latencia, [i0,a0, 0], #i=0.1, a=0.1, e=0 (nadie incubando al inicio)
-                              tiempo, args = (beta_h, gamma_h, beta_m, gamma_m, sigma))
-graficar_resultados_dist((tiempo, simulacion_latencia), ['Ejercicio 5 - B: Modelo con período de incubación en humanos', 'Humanos expuestos e(t)'])
+# #simulacion del modelo con periodo latencia (humano infectado pero no contagia)
+# sigma = 0.3
+# simulacion_latencia = odeint(modelo_malaria_latencia, [i0,a0, 0], #i=0.1, a=0.1, e=0 (nadie incubando al inicio)
+#                               tiempo, args = (beta_h, gamma_h, beta_m, gamma_m, sigma))
+# graficar_resultados_dist((tiempo, simulacion_latencia), ['Ejercicio 5 - B: Modelo con período de incubación en humanos', 'Humanos expuestos e(t)'])
 
 #simulacion del modelo considerando la mortalidad estacional de los mosquitos
+# Simular 5 años con resolución diaria
+tiempo = np.linspace(0, 5*365, 1825)  # 5 años * 365 días/año = 1825 puntos
 u = 0.5
-simulacion_estacional = odeint(modelo_malaria_estacional, y0, tiempo, args=(beta_h, gamma_h, beta_m, gamma_m, u))
-graficar_resultados((tiempo, simulacion_estacional), 'Ejercicio 5 - C: Modelo con mortalidad estacional de mosquitos al final de la estación húmeda')
+sigma = 0.3
+beta_p = 0.15  # Reducido: plasmido madura más lentamente para acumularse
+p0 = 0.05  # Mosquitos con plasmido inmaduro inicial (5% de la población)
+
+simulacion_estacional = odeint(modelo_malaria_estacional, [i0, a0, 0, p0], tiempo, 
+                               args=(beta_h, gamma_h, beta_m, gamma_m, u, sigma, beta_p, 365))
+graficar_comparacion([{'tiempo': tiempo, 'solucion': simulacion_estacional}])
