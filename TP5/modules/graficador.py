@@ -87,17 +87,18 @@ def graficar_comparacion(resultados):
         sol = res['solucion']
         i = sol[:, 0]
         a = sol[:, 1]
-        s = 1 - i  # humanos sanos
-        v = 1 - a   # mosquitos sanos
         e = sol[:, 2]
         p = sol[:, 3]
+        s = 1 - i -e  # humanos sanos
+        v = 1 - a -p  # mosquitos sanos
 
-        ax.plot(t, i, label=' i(t)', linestyle='-', color='steelblue')
-        ax.plot(t, a, label='a(t)', linestyle='--', color='deeppink')
-        ax.plot(t, s, label=' s(t)', linestyle='-.', color='lightgreen')
-        ax.plot(t, v, label='v(t)', linestyle=':', color='orange')
-        ax.plot(t, e, label='e(t)', linestyle='-', color='purple')
-        ax.plot(t, p, label='p(t)', linestyle='--', color='red')
+        ax.plot(t, i, label=' Humanos Infectados i(t)', linestyle='-', color='steelblue')
+        ax.plot(t, a, label=' Mosquitos Infectivos a(t)', linestyle='--', color='deeppink')
+        ax.plot(t, s, label=' Humanos Susceptibles s(t)', linestyle='-.', color='lightgreen')
+        ax.plot(t, v, label=' Mosquitos Susceptibles v(t)', linestyle=':', color='orange')
+        ax.plot(t, e, label=' Humanos Expuestos e(t)', linestyle='-', color='purple')
+        ax.plot(t, p, label=' Mosquitos Latentes p(t)', linestyle='--', color='red')
+        
 
     ax.set_title('Comparación de modelos con distintas estructuras')
     ax.set_xlabel('Tiempo (dias)')

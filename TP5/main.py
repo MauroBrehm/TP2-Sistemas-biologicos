@@ -220,11 +220,11 @@ if eq['Punto_endemico']:
 
 #simulacion del modelo considerando la mortalidad estacional de los mosquitos
 # Simular 5 años con resolución diaria
-tiempo = np.linspace(0, 5*365, 1825)  # 5 años * 365 días/año = 1825 puntos
+tiempo = np.linspace(0, 5*365, 5000)  # 5 años, 5000 puntos para suavizar la curva
 u = 0.5
 sigma = 0.3
-beta_p = 0.15  # Reducido: plasmido madura más lentamente para acumularse
-p0 = 0.05  # Mosquitos con plasmido inmaduro inicial (5% de la población)
+beta_p = 0.4  # Reducido: plasmido madura más lentamente para acumularse
+p0 = 0.01  # Mosquitos con plasmido inmaduro inicial (5% de la población)
 
 simulacion_estacional = odeint(modelo_malaria_estacional, [i0, a0, 0, p0], tiempo, 
                                args=(beta_h, gamma_h, beta_m, gamma_m, u, sigma, beta_p, 365))
