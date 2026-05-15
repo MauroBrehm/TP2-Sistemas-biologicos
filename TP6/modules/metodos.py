@@ -12,4 +12,3 @@ def metod_euler(f , a, b, yi, h):
         t = t + h 
         lista.append((t, y.copy()))  
     return lista
-

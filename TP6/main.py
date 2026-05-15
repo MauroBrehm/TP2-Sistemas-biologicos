@@ -1,6 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import sympy as sp
+from modules.metodos import metod_euler
+from modules.graficador import graficar_resultados, graficar_un_Resultado
 
 
 # =============================================================================
@@ -57,46 +59,66 @@ for i, vec in enumerate(kernel):
 # PUNTO 2 – Implementacion del modelo
 # =============================================================================
 #Parametros del modelo 
-Glucosa=12.8174 #Concentración externa fija
-Vmax1=1398.00 #Hexoquinasa
-K_ATP1=0.10 #Hexoquinasa
-K_Gluc1=0.37 #Hexoquinasa
-k2=2.26 #Consumo de G6P
-Vf_max3=140.282 #PGI
-Vr_max3=140.282 #PGI
-K_G6P3=0.80 #PGI
-K_F6P3=0.15 #PGI
-Vmax4=44.7287 #PFK
-K_F6P4=0.021 #PFK
-kappa=0.15 #PFK
-k5=6.04662 #Aldolasa
-k6=68.48 #Produccion de ATP
-k7=3.21 #Consumo de ATP
-k8f=432.9 #Adenilato Quinasa
-k8r=133.33 #Adenilato Quinasa
-
-#Condiciones iniciales sugeridas 
-G6P_0=1.0
-F6P_0=0.0
-FBP_0=0.0
-ATP_0=2.1
-ADP_0=1.4
-AMP_0=0.1
+parametros = {
+    'Glucosa': 12.8174, #Concentración externa fija
+    'Vmax1': 1398.00, #Hexoquinasa
+    'K_ATP1': 0.10, #Hexoquinasa
+    'K_Gluc1': 0.37, #Hexoquinasa
+    'k2': 2.26, #Consumo de G6P
+    'Vf_max3': 140.282, #PGI
+    'Vr_max3': 140.282, #PGI
+    'K_G6P3': 0.80, #PGI
+    'K_F6P3': 0.15, #PGI
+    'Vmax4': 44.7287, #PFK
+    'K_F6P4': 0.021, #PFK
+    'kappa': 0.15, #PFK
+    'k5': 6.04662, #Aldolasa
+    'k6': 68.48, #Produccion de ATP
+    'k7': 3.21, #Consumo de ATP
+    'k8f': 432.9, #Adenilato Quinasa
+    'k8r': 133.33, #Adenilato Quinasa
+    #condiciones iniciales
+    'G6P_0': 1.0,
+    'F6P_0': 0.0,
+    'FBP_0': 0.0,
+    'ATP_0': 2.1,
+    'ADP_0': 1.4,
+    'AMP_0': 0.1
+}
 
 # Definimos las funciones de velocidad para cada reacción(Creo que deberia pasar tambien los adenilatos)
-def Leyes_velocidad(t, y,Glucosa, Vmax1, K_ATP1, K_Gluc1, k2, Vf_max3, Vr_max3, K_G6P3, K_F6P3, Vmax4, K_F6P4, kappa, k5, k6, k7, k8f, k8r):
+def Leyes_velocidad(t, y, parametros):
     G6P, F6P, FBP, ATP, ADP, AMP = y
-    
+    Glucosa = parametros['Glucosa']
+    Vmax1 = parametros['Vmax1']
+    K_ATP1 = parametros['K_ATP1']
+    K_Gluc1 = parametros['K_Gluc1']
+    k2 = parametros['k2']
+    Vf_max3 = parametros['Vf_max3']
+    Vr_max3 = parametros['Vr_max3']
+    K_G6P3 = parametros['K_G6P3']
+    K_F6P3 = parametros['K_F6P3']
+    Vmax4 = parametros['Vmax4']
+    K_F6P4 = parametros['K_F6P4']
+    kappa = parametros['kappa']
+    k5 = parametros['k5']
+    k6 = parametros['k6']
+    k7 = parametros['k7']
+    k8f = parametros['k8f']
+    k8r = parametros['k8r']
+
     # v1: Hexoquinasa
-    v1 = (Vmax1*ATP*Glucosa)/(1+ATP/K_ATP1+Glucosa/K_Gluc1+
-        (ATP*Glucosa)/(K_ATP1*K_Gluc1))
+    v1 = (Vmax1*ATP*Glucosa)/(1+ATP/K_ATP1+Glucosa/K_Gluc1+(ATP*Glucosa)/(K_ATP1*K_Gluc1))
+    
     # v2: Consumo de G6P
     v2 = k2 *ATP* G6P
     
     # v3: PGI
     v3=(((Vf_max3/K_G6P3)*G6P)-((Vr_max3/K_F6P3)*F6P))/(1+G6P/K_G6P3+F6P/K_F6P3)
+
     # v4: PFK
-    v4 = (Vmax4*F6P**2)
+    v4 = (Vmax4*F6P**2)/(K_F6P4 *(1+kappa*(ATP/AMP)**2)+F6P**2)
+
     # v5: Aldolasa
     v5 = k5 * FBP
     
@@ -111,12 +133,16 @@ def Leyes_velocidad(t, y,Glucosa, Vmax1, K_ATP1, K_Gluc1, k2, Vf_max3, Vr_max3, 
     
     return [0,v1, v2, v3, v4, v5, v6, v7, v8]#Le agrego un 0 asi es mas facil para indexar
 
-    def ecuaciones_diferenciales(t, y):
-        v = Leyes_velocidad(t, y,Glucosa, Vmax1, K_ATP1, K_Gluc1, k2, Vf_max3, Vr_max3, K_G6P3, K_F6P3, Vmax4, K_F6P4, kappa, k5, k6, k7, k8f, k8r)
-        G6P_dt = v[1] - v[2] - v[3]
-        F6P_dt = v[3] - v[4]
-        FBP_dt = v[4] - v[5]
-        ATP_dt = -v[1] - v[2] - v[4] + v[6] - v[7] - v[8]
-        ADP_dt = v[1] + v[2] + v[4] - v[6] + v[7] + 2*v[8]
-        AMP_dt = -v[8]
-        return [G6P_dt, F6P_dt, FBP_dt, ATP_dt, ADP_dt, AMP_dt]
+def ecuaciones_diferenciales(t, y):
+    v = Leyes_velocidad(t, y, parametros)
+    G6P_dt = v[1] - v[2] - v[3]
+    F6P_dt = v[3] - v[4]
+    FBP_dt = v[4] - v[5]
+    ATP_dt = -v[1] - v[2] - v[4] + v[6] - v[7] - v[8]
+    ADP_dt = v[1] + v[2] + v[4] - v[6] + v[7] + 2*v[8]
+    AMP_dt = -v[8]
+    return [G6P_dt, F6P_dt, FBP_dt, ATP_dt, ADP_dt, AMP_dt]
+
+simulacion = metod_euler(ecuaciones_diferenciales, 0, 10, [parametros['G6P_0'], parametros['F6P_0'], parametros['FBP_0'], parametros['ATP_0'], parametros['ADP_0'], parametros['AMP_0']], 0.05)
+
+graficar_resultados(simulacion)
