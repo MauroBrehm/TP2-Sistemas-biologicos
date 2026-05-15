@@ -8,7 +8,9 @@ def metod_euler(f , a, b, yi, h):
     lista = [(t, y.copy())]  #se usa copy para guardar una copia del valor en cada paso, 
                              #sino hacemos esto los valores se sobreescribirían y todas las graficas serian lineas
     for i in range(m):
-        y = y + np.array(f(t, y)) * h 
+        y = y + np.array(f(t, y)) * h
+        if np.any(y < 0):  # Evitar concentraciones negativas
+            y = np.maximum(y, 0)
         t = t + h 
         lista.append((t, y.copy()))  
     return lista

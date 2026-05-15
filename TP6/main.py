@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import sympy as sp
 from modules.metodos import metod_euler
-from modules.graficador import graficar_resultados, graficar_un_Resultado
+from modules.graficador import graficar_resultados
 
 
 # =============================================================================
@@ -143,6 +143,6 @@ def ecuaciones_diferenciales(t, y):
     AMP_dt = -v[8]
     return [G6P_dt, F6P_dt, FBP_dt, ATP_dt, ADP_dt, AMP_dt]
 
-simulacion = metod_euler(ecuaciones_diferenciales, 0, 10, [parametros['G6P_0'], parametros['F6P_0'], parametros['FBP_0'], parametros['ATP_0'], parametros['ADP_0'], parametros['AMP_0']], 0.05  )
+simulacion = metod_euler(ecuaciones_diferenciales, 0, 10, [parametros['G6P_0'], parametros['F6P_0'], parametros['FBP_0'], parametros['ATP_0'], parametros['ADP_0'], parametros['AMP_0']], 0.1)
 
 graficar_resultados(simulacion)
