@@ -18,7 +18,8 @@ def graficar_resultados (simulacion):
     ax.plot(tiempos, ADP, label=f'ADP', color='orange')
     ax.plot(tiempos, AMP, label=f'AMP', color='cyan')
 
-    ax.set_ylim(0, 10)
+    ax.set_ylim(0, 6)
+    ax.set_xlim(0, 1)
     ax.set_xlabel('Tiempo (minutos)')
     ax.set_ylabel('Concentración (mM)')   
     ax.set_title(f'Modelo dinamico de glucolisis')
