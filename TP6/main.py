@@ -108,16 +108,16 @@ def Leyes_velocidad(t, y, parametros):
     k8r = parametros['k8r']
 
     # v1: Hexoquinasa
-    v1 = (Vmax1*ATP*Glucosa)/(1+ATP/K_ATP1+Glucosa/K_Gluc1+(ATP*Glucosa)/(K_ATP1*K_Gluc1))
+    v1 = (Vmax1*ATP*Glucosa)/(1 + ATP/K_ATP1 + Glucosa/K_Gluc1 + (ATP*Glucosa)/(K_ATP1*K_Gluc1))
     
     # v2: Consumo de G6P
     v2 = k2 *ATP* G6P
     
     # v3: PGI
-    v3=(((Vf_max3/K_G6P3)*G6P)-((Vr_max3/K_F6P3)*F6P))/(1+G6P/K_G6P3+F6P/K_F6P3)
+    v3=(((Vf_max3/K_G6P3)*G6P) - ((Vr_max3/K_F6P3)*F6P))/(1 + G6P/K_G6P3 + F6P/K_F6P3)
 
     # v4: PFK
-    v4 = (Vmax4*F6P**2)/(K_F6P4 *(1+kappa*(ATP/AMP)**2)+F6P**2)
+    v4 = (Vmax4*F6P**2)/(K_F6P4 *(1 + kappa*(ATP/AMP)**2) + F6P**2)
 
     # v5: Aldolasa
     v5 = k5 * FBP
@@ -129,7 +129,7 @@ def Leyes_velocidad(t, y, parametros):
     v7 = k7 * ATP
     
     # v8: Adenilato Quinasa
-    v8=k8f*ATP*AMP-k8r*ADP**2
+    v8=k8f*ATP*AMP - k8r*ADP**2
     
     return [0,v1, v2, v3, v4, v5, v6, v7, v8]#Le agrego un 0 asi es mas facil para indexar
 
@@ -143,6 +143,6 @@ def ecuaciones_diferenciales(t, y):
     AMP_dt = -v[8]
     return [G6P_dt, F6P_dt, FBP_dt, ATP_dt, ADP_dt, AMP_dt]
 
-simulacion = metod_euler(ecuaciones_diferenciales, 0, 10, [parametros['G6P_0'], parametros['F6P_0'], parametros['FBP_0'], parametros['ATP_0'], parametros['ADP_0'], parametros['AMP_0']], 0.05)
+simulacion = metod_euler(ecuaciones_diferenciales, 0, 10, [parametros['G6P_0'], parametros['F6P_0'], parametros['FBP_0'], parametros['ATP_0'], parametros['ADP_0'], parametros['AMP_0']], 0.05  )
 
 graficar_resultados(simulacion)
