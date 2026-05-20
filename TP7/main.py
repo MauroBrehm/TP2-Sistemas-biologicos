@@ -20,7 +20,7 @@ v_prr = -0.001
 
 #tasas de cambio 
 t_existacion =60.0 #mV/ms --> velocidad de subida en estado E
-t_repolariz=-1.0 #mV/ms --> velocidad de bajada en estado PRR
+t_repolariz=1.0 #mV/ms --> velocidad de bajada en estado PRR
 t_pra_exp =0.04 #fraccion por ms --> decaimiento exponencial en PRA (4% por ms)
 
 #Marcapasos --> frecuencia cardíaca de 60 latidos/minuto = 1 latido cada 1000 ms
@@ -47,4 +47,48 @@ potencial = np.full((filas, cols), v_reposo, dtype=float)
 
 #registros de ECG a lo largo del tiempo
 ECG =[]
+
+nuevo_estado=estado.copy()
+nuevo_potencial=potencial.copy()
+for i in range(filas):
+    for j in range(cols):
+        V=potencial[i,j]
+        e=estado[i,j]
+        #Tema de los vecinos
+        vecinos = []
+        if i>0:
+            vecinos.append(potencial[i-1,j]) #vecino de arriba
+        if i<filas-1:
+            vecinos.append(potencial[i+1,j]) #vecino de abajo
+        if j>0:
+            vecinos.append(potencial[i,j-1]) #vecino de izquierda
+        if j<cols-1:
+            vecinos.append(potencial[i,j+1]) #vecino de derecha
+
+        #Corriente total recibida
+        I=G*sum(v-V for v in vecinos)
+        if estado[i,j]==reposo:
+            if I>=UR:
+                nuevo_estado[i,j]=excitado
+                nuevo_potencial[i,j]=v_pico
+        elif estado[i,j]==excitado:#Entra sodio por lo que el potencial sube rapido(ocurre despolarizacion)
+            nuevo_potencial[i,j]=min(v_pico, V+t_existacion*dt)
+            if nuevo_potencial[i,j]<=v_reposo:
+                nuevo_estado[i,j]=pra
+        elif estado[i,j]==pra:#No puede excitarse otra vez auneque el estimulo es fuerte(Si no, nos re morimos)
+            nuevo_potencial[i,j]=max(v_prr, V-t_pra_exp*V*dt)
+            if nuevo_potencial[i,j]<=v_prr:
+                nuevo_estado[i,j]=prr
+        elif estado[i,j]==prr:
+            nuevo_potencial[i,j]=max(v_reposo, V-t_repolariz*dt)
+            if nuevo_potencial[i,j]<=v_reposo:
+                nuevo_estado[i,j]=reposo
+estado=nuevo_estado.copy()
+potencial=nuevo_potencial.copy()
+#Esto es para el marcapaso
+for paso in range(n_pasos):
+    if paso%int(periodo_marcapasos/dt)==0:
+        potencial[0,:]=v_pico
+        estado[0,:]=excitado
+
 
