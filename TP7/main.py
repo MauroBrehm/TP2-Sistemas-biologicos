@@ -58,9 +58,10 @@ ECG =[]
 
 for paso in range(n_pasos):
     if paso % int(periodo_marcapasos/dt) == 0:
+        if estado[0, cols//2] == reposo: #solo se excita si esta en reposo, sino no se excita y se espera al siguiente periodo del marcapasos
         #se excita una sola celula en el centro de la matriz
-        potencial[0, cols//2] = v_reposo
-        estado[0, cols//2] = excitado
+            potencial[0, cols//2] = v_reposo
+            estado[0, cols//2] = excitado
 
     nuevo_potencial = potencial.copy()
     nuevo_estado = estado.copy()
@@ -105,8 +106,8 @@ for paso in range(n_pasos):
                 nuevo_potencial[i,j] = max(v_reposo, V - t_rep * dt)
                 if I >= UP: #Si el estimulo es fuerte, puede volver a excitarse
                     nuevo_estado[i,j] = excitado
-                    nuevo_potencial[i,j] = v_pico
-            
+                    nuevo_potencial[i,j] = V #conserva el potencial actual al re-excitarse
+        
                 if nuevo_potencial[i,j] <= v_reposo: 
                     nuevo_estado[i,j] = reposo
                     nuevo_potencial[i,j] = v_reposo       
