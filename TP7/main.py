@@ -14,7 +14,7 @@ UP= 120.0 #umbral para reexitacion desde PRR
 G = 1.0
 
 #Umbrales para cambios de estado
-v_reposo = -90.0
+v_reposo = -90.0    
 v_pico= 30.0
 v_prr = 0.001
 
@@ -50,16 +50,16 @@ potencial = np.full((filas, cols), v_reposo, dtype=float)
 
 def potencial_total_vertical(matriz):
     """Calcula el potencial total vertical como suma de los dipolos verticales."""
-    dipolos = matriz[1:, :] - matriz[:-1, :]
+    dipolos = matriz[:-1, :] - matriz[1:, :]
     return np.sum(dipolos)
 
 #registros de ECG a lo largo del tiempo
 ECG =[]
-#Esto es para el marcapaso
+
 for paso in range(n_pasos):
     if paso % int(periodo_marcapasos/dt) == 0:
-        potencial[0,:] = v_pico
-        estado[0,:] = excitado
+        potencial[0, :] = v_reposo
+        estado[0, :] = excitado
 
     nuevo_potencial = potencial.copy()
     nuevo_estado = estado.copy()
@@ -80,14 +80,12 @@ for paso in range(n_pasos):
             if j < cols-1:
                 vecinos.append(potencial[i,j+1]) #vecino de derecha
 
-            
             I = G*sum(v - V for v in vecinos) #Corriente total recibida
-            
 
             # --- Reposo -> Excitado ---
             if estado[i,j] == reposo and I >= UR:
                 nuevo_estado[i,j] = excitado
-                nuevo_potencial[i,j] = v_pico 
+                nuevo_potencial[i,j] = v_reposo
 
             elif estado[i,j] == excitado:     #Entra sodio por lo que el potencial sube rapido(ocurre despolarizacion)
                 nuevo_potencial[i,j] = min(v_pico, V + t_exc * dt)
@@ -97,25 +95,23 @@ for paso in range(n_pasos):
                     nuevo_potencial[i,j] = v_pico
 
             elif estado[i,j] == pra:  #No puede excitarse otra vez auneque el estimulo es fuerte(Si no, nos re morimos)
-                nuevo_potencial[i,j] =  max(v_prr, V - t_pra_exp * V * dt)
+                nuevo_potencial[i,j] =  max(v_prr, V * (1 - t_pra_exp * dt)) 
                 # --- PRA -> PRR ---
                 if nuevo_potencial[i,j] <= v_prr: 
                     nuevo_estado[i,j] = prr
 
             elif estado[i,j] == prr:
                 nuevo_potencial[i,j] = max(v_reposo, V - t_rep * dt)
-
-                if nuevo_potencial[i,j] >= UP: #Si el estimulo es fuerte, puede volver a excitarse
+                if I >= UP: #Si el estimulo es fuerte, puede volver a excitarse
                     nuevo_estado[i,j] = excitado
                     nuevo_potencial[i,j] = v_pico
-
+            
                 if nuevo_potencial[i,j] <= v_reposo: 
                     nuevo_estado[i,j] = reposo
-                    nuevo_potencial[i,j] = v_reposo
-                    
-            estado = nuevo_estado.copy()
-            potencial = nuevo_potencial.copy()
-            ECG.append(potencial_total_vertical(potencial))
+                    nuevo_potencial[i,j] = v_reposo       
+    estado = nuevo_estado
+    potencial = nuevo_potencial
+    ECG.append(potencial_total_vertical(potencial))
 
 tiempos = np.arange(len(ECG)) * dt
 graficar_resultados(ECG, tiempos)
