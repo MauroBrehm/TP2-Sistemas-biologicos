@@ -154,28 +154,25 @@ def modelo_malaria_latencia (y, t, beta_h, gamma_h, beta_m, gamma_m, sigma):
 #=====================================================================
 #ejercicio 5 - C
 #=====================================================================
-def mortalidad_estacional(t, gamma_m, u, periodo=365):
+def mortalidad_estacional(t, gamma_m, u, fin_humeda=120, periodo=365):
     '''Mortandad de mosquitos con ciclo estacional periódico (6 meses fríos, 6 meses cálidos)
         gamma_m: tasa base de mortalidad
         u: aumento de mortalidad durante estaciones frías
         periodo: días en un año (365)
     '''
-    # Usar coseno negativo para crear ciclo: 
-    # máximo en t=0, 182.5, 365... (estaciones frías)
-    # mínimo en t=91.25, 273.75... (estaciones cálidas)
-    ciclo = -np.cos(2 * np.pi * t / periodo)  # Varía de -1 a 1
-    factor = (ciclo + 1) / 2  # Normaliza a 0-1 (0=mortalidad base, 1=máxima)
-    
-    return gamma_m + u * factor
+    t_mod = t % periodo
+    # Sigmoide: mortalidad baja durante la húmeda (t_mod < fin_humeda), alta después
+    return gamma_m + u / (1 + np.exp(-10 * (t_mod - fin_humeda)))
 
-def modelo_malaria_estacional(y, t, beta_h, gamma_h, beta_m, gamma_m, u, sigma, beta_p, periodo=365):
+
+def modelo_malaria_estacional(y, t, beta_h, gamma_h, beta_m, gamma_m, u, sigma, beta_p, gamma_p):
     '''Modelo de malaria con mortalidad estacional periódica de mosquitos'''
     i, a, e, p = y
-    gamma_m_t = mortalidad_estacional(t, gamma_m, u, periodo)
+    gamma_m_t = mortalidad_estacional(t, gamma_m, u)
     de_dt = beta_h * (1 - i - e) * a - sigma * e 
     di_dt = sigma * e - gamma_h * i
     da_dt = beta_p * p - gamma_m_t * a
-    dp_dt = beta_m * (1 - a - p)* i - beta_p * p
+    dp_dt = beta_m * (1 - a - p)* i - beta_p * p - gamma_p * p
 
     return [di_dt, da_dt, de_dt, dp_dt]
 
@@ -223,9 +220,10 @@ if eq['Punto_endemico']:
 tiempo = np.linspace(0, 5*365, 5000)  # 5 años, 5000 puntos para suavizar la curva
 u = 0.5
 sigma = 0.3
+gamma_p = 0.5  # Tasa a la que los mosquitos con plasmido inmaduro mueren o pierden el plasmido
 beta_p = 0.4  # Reducido: plasmido madura más lentamente para acumularse
-p0 = 0.01  # Mosquitos con plasmido inmaduro inicial (5% de la población)
+p0 = 0.1  # Mosquitos con plasmido inmaduro inicial (5% de la población)
 
 simulacion_estacional = odeint(modelo_malaria_estacional, [i0, a0, 0, p0], tiempo, 
-                               args=(beta_h, gamma_h, beta_m, gamma_m, u, sigma, beta_p, 365))
+                               args=(beta_h, gamma_h, beta_m, gamma_m, u, sigma, beta_p, gamma_p))
 graficar_comparacion([{'tiempo': tiempo, 'solucion': simulacion_estacional}])

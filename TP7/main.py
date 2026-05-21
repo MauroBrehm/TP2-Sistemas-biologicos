@@ -58,8 +58,9 @@ ECG =[]
 
 for paso in range(n_pasos):
     if paso % int(periodo_marcapasos/dt) == 0:
-        potencial[0, :] = v_reposo
-        estado[0, :] = excitado
+        #se excita una sola celula en el centro de la matriz
+        potencial[0, cols//2] = v_reposo
+        estado[0, cols//2] = excitado
 
     nuevo_potencial = potencial.copy()
     nuevo_estado = estado.copy()
@@ -75,10 +76,10 @@ for paso in range(n_pasos):
                 vecinos.append(potencial[i-1,j]) #vecino de arriba
             if i < filas-1:
                 vecinos.append(potencial[i+1,j]) #vecino de abajo
-            if j > 0:
-                vecinos.append(potencial[i,j-1]) #vecino de izquierda
-            if j < cols-1:
-                vecinos.append(potencial[i,j+1]) #vecino de derecha
+            #lateral izquierdo periodico --> el vecino de la izquierda del borde se conecta con el de la derecha
+            vecinos.append(potencial[i,(j-1)%cols])
+            #lateral derecho periodico
+            vecinos.append(potencial[i,(j+1)%cols]) #vecino de derecha
 
             I = G*sum(v - V for v in vecinos) #Corriente total recibida
 
