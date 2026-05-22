@@ -25,31 +25,6 @@ def graficar_resultados(datos, labels):
     plt.tight_layout()
     plt.show()
 
-def graficar_resultados_dist ( simulacion, labels):
-    '''Grafica modelos con 3 compartimentos (i(t), a(t) y un tercero: e,r o p)'''
-    tiempo, solucion = simulacion
-    i = solucion[:, 0]  # Humanos infectados
-    a = solucion[:, 1]  # Mosquitos infectados
-    r = solucion[:, 2]  #Tercer compartimento (expuestos, recuperados o plasmidos)
-    s=1-i-r # humanos sanos 
-    v=1-a # mosquitos sanos 
-
-    fig, ax = plt.subplots(figsize=(9, 5))
-    ax.plot(tiempo, i, label=f'Humanos infectados i(t)', color='steelblue')
-    ax.plot(tiempo, a, label=f'Mosquitos infectados a(t)', color='deeppink')
-    ax.plot(tiempo, r, label=f'{labels[1]}', color='lightgreen')
-    ax.plot(tiempo, s, label=f'Humanos sanos s(t)', color='purple')
-    ax.plot(tiempo, v, label=f'Mosquitos sanos v(t)', color='orange')
-
-    ax.set_ylim(-0.2, 1.2) #tiene que ir de 0 a 1 porque son proporciones de la población total
-    ax.set_xlabel('Tiempo (dias)')
-    ax.set_ylabel('Proporción de la población')   
-    ax.set_title(f'{labels[0]}')
-
-    ax.legend()
-    ax.grid(True)
-    plt.tight_layout()
-    plt.show()
 
 def graficar_varias_ci(resultados, equilibrio):
     """Grafica múltiples condiciones iniciales en una sola figura con subplots."""
@@ -93,7 +68,7 @@ def graficar_comparacion(resultados):
         v = 1 - a -p  # mosquitos sanos
 
         ax.plot(t, i, label=' Humanos Infectados i(t)', linestyle='-', color='steelblue')
-        ax.plot(t, a, label=' Mosquitos Infectivos a(t)', linestyle='--', color='deeppink')
+        ax.plot(t, a, label=' Mosquitos Infectados a(t)', linestyle='--', color='deeppink')
         ax.plot(t, s, label=' Humanos Susceptibles s(t)', linestyle='-.', color='lightgreen')
         ax.plot(t, v, label=' Mosquitos Susceptibles v(t)', linestyle=':', color='orange')
         ax.plot(t, e, label=' Humanos Expuestos e(t)', linestyle='-', color='purple')

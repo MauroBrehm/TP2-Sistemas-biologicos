@@ -108,9 +108,9 @@ for paso in range(n_pasos):
                     nuevo_estado[i,j] = excitado
                     nuevo_potencial[i,j] = V #conserva el potencial actual al re-excitarse
         
-                if nuevo_potencial[i,j] <= v_reposo: 
+                elif nuevo_potencial[i,j] <= v_reposo: 
                     nuevo_estado[i,j] = reposo
-                    nuevo_potencial[i,j] = v_reposo       
+                    nuevo_potencial[i,j] = v_reposo   
     estado = nuevo_estado
     potencial = nuevo_potencial
     ECG.append(potencial_total_vertical(potencial))
