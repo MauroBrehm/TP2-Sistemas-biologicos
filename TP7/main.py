@@ -1,5 +1,7 @@
 import numpy as np
+import matplotlib.pyplot as plt
 from modules.graficador import graficar_resultados
+
 
 #Parametros del modelo
 filas=50
@@ -55,6 +57,7 @@ def potencial_total_vertical(matriz):
 
 #registros de ECG a lo largo del tiempo
 ECG =[]
+potencial_celula=[]
 
 for paso in range(n_pasos):
     if paso % int(periodo_marcapasos/dt) == 0:
@@ -85,38 +88,46 @@ for paso in range(n_pasos):
             I = G*sum(v - V for v in vecinos) #Corriente total recibida
 
             # --- Reposo -> Excitado ---
-            if estado[i,j] == reposo and I > UR:
+            if e == reposo and I >= UR:
                 nuevo_estado[i,j] = excitado
                 nuevo_potencial[i,j] = v_reposo
 
-            elif estado[i,j] == excitado:     #Entra sodio por lo que el potencial sube rapido(ocurre despolarizacion)
+            elif e == excitado:     #Entra sodio por lo que el potencial sube rapido(ocurre despolarizacion)
                 nuevo_potencial[i,j] = min(v_pico, V + t_exc * dt)
                 # --- Excitado -> PRA ---
                 if nuevo_potencial[i,j] >= v_pico: #cuando alcanza el pico, pasa a PRA
                     nuevo_estado[i,j] = pra
                     nuevo_potencial[i,j] = v_pico
 
-            elif estado[i,j] == pra:  #No puede excitarse otra vez auneque el estimulo es fuerte(Si no, nos re morimos)
+            elif e == pra:  #No puede excitarse otra vez auneque el estimulo es fuerte(Si no, nos re morimos)
                 nuevo_potencial[i,j] =  max(v_prr, V * (1 - t_pra_exp * dt)) 
                 # --- PRA -> PRR ---
                 if nuevo_potencial[i,j] <= v_prr: 
                     nuevo_estado[i,j] = prr
 
-            elif estado[i,j] == prr:
-                nuevo_potencial[i,j] = max(v_reposo, V - t_rep * dt)
+            elif e == prr:
                 if I >= UP: #Si el estimulo es fuerte, puede volver a excitarse
                     nuevo_estado[i,j] = excitado
                     nuevo_potencial[i,j] = V #conserva el potencial actual al re-excitarse
-        
-                elif nuevo_potencial[i,j] <= v_reposo: 
-                    nuevo_estado[i,j] = reposo
-                    nuevo_potencial[i,j] = v_reposo   
+                else:
+                    nuevo_potencial[i,j] = max(v_reposo, V - t_rep * dt)
+                    if nuevo_potencial[i,j] <= v_reposo: #cuando vuelve al potencial de reposo, pasa a reposo
+                        nuevo_estado[i,j] = reposo
+                        nuevo_potencial[i,j] = v_reposo   
 
     estado = nuevo_estado
     potencial = nuevo_potencial
+    potencial_celula.append(potencial[0, cols//2]) #registro del potencial de la celula estimulada a lo largo del tiempo
     ECG.append(potencial_total_vertical(potencial))
 
 tiempos = np.arange(len(ECG)) * dt
-graficar_resultados(ECG, tiempos)
-
+#graficar_resultados(ECG, tiempos)
+plt.figure(figsize=(10,4))
+plt.plot(tiempos, potencial_celula, color='green')
+plt.ylim(-100, 40)
+plt.xlabel('Tiempo (ms)')
+plt.ylabel('Potencial de membrana (mV)')
+plt.title('Potencial de la célula marcapasos')
+plt.grid(True)
+plt.show()
 
