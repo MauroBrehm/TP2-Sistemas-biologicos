@@ -85,7 +85,7 @@ for paso in range(n_pasos):
             I = G*sum(v - V for v in vecinos) #Corriente total recibida
 
             # --- Reposo -> Excitado ---
-            if estado[i,j] == reposo and I >= UR:
+            if estado[i,j] == reposo and I > UR:
                 nuevo_estado[i,j] = excitado
                 nuevo_potencial[i,j] = v_reposo
 
@@ -111,6 +111,7 @@ for paso in range(n_pasos):
                 elif nuevo_potencial[i,j] <= v_reposo: 
                     nuevo_estado[i,j] = reposo
                     nuevo_potencial[i,j] = v_reposo   
+
     estado = nuevo_estado
     potencial = nuevo_potencial
     ECG.append(potencial_total_vertical(potencial))
