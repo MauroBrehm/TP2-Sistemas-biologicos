@@ -1,5 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
+from matplotlib.colors import ListedColormap
+
 from modules.graficador import graficar_resultados
 
 
@@ -58,7 +61,35 @@ def potencial_total_vertical(matriz):
 #registros de ECG a lo largo del tiempo
 ECG =[]
 potencial_celula=[]
+#------------------------------------------------------------------------+
+#Graficaion de cuadrilla
+# Colores para cada estado
+# 0 = reposo
+# 1 = excitado
+# 2 = PRA
+# 3 = PRR
 
+cmap = ListedColormap([
+    'blue',    # reposo
+    'red',     # excitado
+    'yellow',  # PRA
+    'green'    # PRR
+])
+
+plt.ion()
+
+fig, ax = plt.subplots(figsize=(6,6))
+legendas = [
+    mpatches.Patch(color='blue', label='Reposo'),
+    mpatches.Patch(color='red', label='Excitado'),
+    mpatches.Patch(color='yellow', label='PRA'),
+    mpatches.Patch(color='green', label='PRR')
+]
+
+ax.legend(handles=legendas,
+          bbox_to_anchor=(1.05,1),
+          loc='upper left')
+#------------------------------------------------------------------------------
 for paso in range(n_pasos):
     if paso % int(periodo_marcapasos/dt) == 0:
         if estado[0, cols//2] == reposo: #solo se excita si esta en reposo, sino no se excita y se espera al siguiente periodo del marcapasos
@@ -117,6 +148,22 @@ for paso in range(n_pasos):
 
     estado = nuevo_estado
     potencial = nuevo_potencial
+    # Mostrar cada 20ms(para la grafica)
+    if paso % 20 == 0:
+        if paso>2000:
+            break
+        ax.clear()
+
+        img = ax.imshow(
+            estado,
+            cmap=cmap,
+            vmin=0,
+            vmax=3
+        )
+
+        ax.set_title(f"Tiempo = {paso*dt:.0f} ms")
+
+        plt.pause(0.01)
     potencial_celula.append(potencial[0, cols//2]) #registro del potencial de la celula estimulada a lo largo del tiempo
     ECG.append(potencial_total_vertical(potencial))
 
