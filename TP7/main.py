@@ -70,20 +70,20 @@ potencial_celula=[]
 # 3 = PRR
 
 cmap = ListedColormap([
-    'blue',    # reposo
+    'black',    # reposo
     'red',     # excitado
-    'yellow',  # PRA
-    'green'    # PRR
+    'pink',  # PRA
+    'purple'    # PRR
 ])
 
 plt.ion()
 
 fig, ax = plt.subplots(figsize=(6,6))
 legendas = [
-    mpatches.Patch(color='blue', label='Reposo'),
+    mpatches.Patch(color='black', label='Reposo'),
     mpatches.Patch(color='red', label='Excitado'),
-    mpatches.Patch(color='yellow', label='PRA'),
-    mpatches.Patch(color='green', label='PRR')
+    mpatches.Patch(color='pink', label='PRA'),
+    mpatches.Patch(color='purple', label='PRR')
 ]
 
 ax.legend(handles=legendas,
@@ -153,28 +153,32 @@ for paso in range(n_pasos):
         if paso>2000:
             break
         ax.clear()
-
-        img = ax.imshow(
-            estado,
-            cmap=cmap,
-            vmin=0,
-            vmax=3
-        )
-
+        img = ax.imshow(estado, cmap=cmap, vmin=0, vmax=3)
         ax.set_title(f"Tiempo = {paso*dt:.0f} ms")
-
+    
+    # Volver a dibujar la leyenda después de clear()
+        legendas = [
+            mpatches.Patch(color='black', label='Reposo'),
+            mpatches.Patch(color='red', label='Excitado'),
+            mpatches.Patch(color='pink', label='PRA'),
+            mpatches.Patch(color='purple', label='PRR')
+    ]
+        ax.legend(handles=legendas, bbox_to_anchor=(1.05, 1), loc='upper left')
+    
         plt.pause(0.01)
+
     potencial_celula.append(potencial[0, cols//2]) #registro del potencial de la celula estimulada a lo largo del tiempo
     ECG.append(potencial_total_vertical(potencial))
 
 tiempos = np.arange(len(ECG)) * dt
 #graficar_resultados(ECG, tiempos)
 plt.figure(figsize=(10,4))
-plt.plot(tiempos, potencial_celula, color='green')
+plt.plot(tiempos, potencial_celula, color='red')
 plt.ylim(-100, 40)
 plt.xlabel('Tiempo (ms)')
 plt.ylabel('Potencial de membrana (mV)')
 plt.title('Potencial de la célula marcapasos')
 plt.grid(True)
+plt.ioff()
 plt.show()
 
