@@ -144,7 +144,8 @@ for paso in range(n_pasos):
                     nuevo_potencial[i,j] = max(v_reposo, V - t_rep * dt)
                     if nuevo_potencial[i,j] <= v_reposo: #cuando vuelve al potencial de reposo, pasa a reposo
                         nuevo_estado[i,j] = reposo
-                        nuevo_potencial[i,j] = v_reposo   
+                        nuevo_potencial[i,j] = v_reposo
+            
 
     estado = nuevo_estado
     potencial = nuevo_potencial
@@ -182,3 +183,4 @@ plt.grid(True)
 plt.ioff()
 plt.show()
 
+graficar_resultados(ECG, tiempos)
