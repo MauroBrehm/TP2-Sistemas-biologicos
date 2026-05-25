@@ -28,7 +28,7 @@ t_exc = 60.0   # mV/ms --> velocidad de subida en estado excitado
 
 t_rep = 1.0    # mV/ms --> velocidad de bajada en PRR
 
-t_pra_exp = 0.04  # fracción de decaimiento en PRA por ms
+t_pra_exp = 0.08  # fracción de decaimiento en PRA por ms
 
 #Marcapasos --> frecuencia cardíaca de 60 latidos/minuto = 1 latido cada 1000 ms
 periodo_marcapasos = 1000.0 #ms
@@ -56,7 +56,7 @@ potencial = np.full((filas, cols), v_reposo, dtype=float)
 def potencial_total_vertical(matriz):
     """Calcula el potencial total vertical como suma de los dipolos verticales."""
     dipolos = matriz[:-1, :] - matriz[1:, :]
-    return np.sum(dipolos)
+    return np.sum(dipolos) 
 
 #registros de ECG a lo largo del tiempo
 ECG =[]
@@ -172,7 +172,7 @@ for paso in range(n_pasos):
     ECG.append(potencial_total_vertical(potencial))
 
 tiempos = np.arange(len(ECG)) * dt
-#graficar_resultados(ECG, tiempos)
+graficar_resultados(ECG, tiempos)
 plt.figure(figsize=(10,4))
 plt.plot(tiempos, potencial_celula, color='red')
 plt.ylim(-100, 40)
@@ -182,5 +182,3 @@ plt.title('Potencial de la célula marcapasos')
 plt.grid(True)
 plt.ioff()
 plt.show()
-
-graficar_resultados(ECG, tiempos)
