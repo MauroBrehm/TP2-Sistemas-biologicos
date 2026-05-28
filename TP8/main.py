@@ -352,3 +352,104 @@ for fig in [fig_v, fig_gNa, fig_gK]:
     fig.tight_layout()
 plt.show()
 
+###########################################################
+#ACT 5 - Modelo estocastico completo: canales de Na y K estocásticos
+###########################################################
+NNa= 100
+NK= 100
+#Inicializamos K
+No_k = np.random.binomial(NK, n0)
+Nc_k = NK - No_k
+
+#Inicializamos NA
+Nm = 3 * NNa
+Nh = NNa
+
+Mo = np.random.binomial(Nm, m0)
+Mc = Nm - Mo
+
+Ho = np.random.binomial(Nh, h0)
+Hc = Nh - Ho
+
+V_est   = np.zeros(len(t))
+gNa_est = np.zeros(len(t))
+gK_est  = np.zeros(len(t))
+
+V_est[0] = V0
+#Ahora viene el bucle temporal 
+for k in range(len(t)-1):
+
+    Vk = V_est[k]
+    #Actualizar canales de K estocásticos
+    p_open_k  = min(alpha_n(Vk)*dt, 1.0)
+    p_close_k = min(beta_n(Vk)*dt, 1.0)
+
+    n_open  = np.random.binomial(Nc_k, p_open_k)
+    n_close = np.random.binomial(No_k, p_close_k)
+
+    No_k = No_k + n_open - n_close
+    Nc_k = NK - No_k
+
+    gK = gKBar * (No_k / NK)**4
+
+    #m Estocastico
+    p_open_m  = min(alpha_m(Vk)*dt, 1.0)
+    p_close_m = min(beta_m(Vk)*dt, 1.0)
+
+    m_open  = np.random.binomial(Mc, p_open_m)
+    m_close = np.random.binomial(Mo, p_close_m)
+
+    Mo = Mo + m_open - m_close
+    Mc = Nm - Mo
+
+    #h Estocastico
+    p_open_h  = min(alpha_h(Vk)*dt, 1.0)
+    p_close_h = min(beta_h(Vk)*dt, 1.0)
+
+    h_open  = np.random.binomial(Hc, p_open_h)
+    h_close = np.random.binomial(Ho, p_close_h)
+
+    Ho = Ho + h_open - h_close
+    Hc = Nh - Ho
+
+    #Conductancia de Na Estocástica
+    m_frac = Mo / Nm
+    h_frac = Ho / Nh
+
+    gNa = gNaBar * (m_frac**3) * h_frac
+
+    #Ecuacion de membrana con gK y gNa estocasticos
+    dVdt = (
+        I[k]
+        - gNa*(Vk - ENa)
+        - gK*(Vk - EK)
+        - gLBar*(Vk - EL)
+    ) / Cm
+
+    V_est[k+1] = Vk + dVdt*dt
+    #Guardar conductancias para graficar
+    gNa_est[k+1] = gNa
+    gK_est[k+1]  = gK
+#Graficar resultados
+fig, axes = plt.subplots(3, 1, figsize=(10,7), sharex=True)
+
+fig.suptitle('Modelo completamente estocástico (Na y K)')
+
+# Voltaje
+axes[0].plot(t, V_est)
+axes[0].set_ylabel('V (mV)')
+axes[0].grid(True, alpha=0.3)
+
+# Conductancia sodio
+axes[1].plot(t, gNa_est)
+axes[1].set_ylabel('gNa est')
+axes[1].grid(True, alpha=0.3)
+
+# Conductancia potasio
+axes[2].plot(t, gK_est)
+axes[2].set_ylabel('gK est')
+axes[2].set_xlabel('Tiempo (ms)')
+axes[2].grid(True, alpha=0.3)
+
+plt.tight_layout()
+plt.show()
