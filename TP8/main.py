@@ -266,3 +266,89 @@ axes[2].set_xlabel('Tiempo (ms)')
 plt.tight_layout()
 plt.show()
 
+###########################################################
+#ACT 4 - V, gNa y gKest aplicando pulsos de corriente con distintas amplitudes y duraciones
+###########################################################
+
+def generar_pulso_estocastico(t_inicio, dur, amplitud, N=100, T=50.0, dt=0.01):
+    t = np.arange(0, T + dt, dt)
+
+    # Condiciones iniciales en estado estable (V = -70 mV)
+    V0 = -70.0
+    m0 = alpha_m(V0) / (alpha_m(V0) + beta_m(V0))
+    h0 = alpha_h(V0) / (alpha_h(V0) + beta_h(V0))
+    n0 = alpha_n(V0) / (alpha_n(V0) + beta_n(V0))
+
+    V = np.zeros(len(t))
+    m = np.zeros(len(t))
+    h = np.zeros(len(t))
+    n = np.zeros(len(t))
+    gKest = np.zeros(len(t))
+    V[0], m[0], h[0], n[0] = V0, m0, h0, n0
+
+    I = np.zeros(len(t))
+    I[(t >= t_inicio) & (t < t_inicio + dur)] = amplitud
+
+    No = int(np.random.binomial(N, n0))
+    Nc = N - No
+    gKest[0] = gKBar * (No / N)**4
+
+    for k in range(len(t) - 1):
+        Vk, mk, hk, nk = V[k], m[k], h[k], n[k]
+
+        p_open = min(alpha_n(Vk) * dt, 1.0)
+        p_close = min(beta_n(Vk) * dt, 1.0)
+
+        n_open = np.random.binomial(Nc, p_open)
+        n_close = np.random.binomial(No, p_close)
+
+        No = No + n_open - n_close
+        Nc = N - No
+        gKest[k + 1] = gKBar * (No / N)**4
+
+        gNa = gNaBar * mk**3 * hk
+        dVdt = (I[k] - gNa * (Vk - ENa) - gKest[k] * (Vk - EK) - gLBar * (Vk - EL)) / Cm
+
+        V[k+1] = Vk + dVdt * dt
+        m[k+1] = mk + (alpha_m(Vk) * (1 - mk) - beta_m(Vk) * mk) * dt
+        h[k+1] = hk + (alpha_h(Vk) * (1 - hk) - beta_h(Vk) * hk) * dt
+        n[k+1] = nk + (alpha_n(Vk) * (1 - nk) - beta_n(Vk) * nk) * dt
+
+    gNa = gNaBar * m**3 * h
+    return t, V, gNa, gKest, I
+
+durac      = [0.5, 1, 3]
+amplitudes = [7.5, 15, 30]
+colores    = ['deeppink', 'yellowgreen', 'steelblue']  # uno por amplitud
+
+fig_v,   axes_v   = plt.subplots(1, len(durac), figsize=(14, 4), sharex=True, sharey=True)
+fig_gNa, axes_gNa = plt.subplots(1, len(durac), figsize=(14, 4), sharex=True, sharey=True)
+fig_gK,  axes_gK  = plt.subplots(1, len(durac), figsize=(14, 4), sharex=True, sharey=True)
+
+fig_v.suptitle('V — misma duración, distintas amplitudes')
+fig_gNa.suptitle('gNa — misma duración, distintas amplitudes')
+fig_gK.suptitle('gKest — misma duración, distintas amplitudes')
+
+for j, dur in enumerate(durac):          # columna = duración
+    for amp, color in zip(amplitudes, colores):   # línea = amplitud
+
+        t, V, gNa, gKest, I = generar_pulso_estocastico(t_inicio=5, dur=dur, amplitud=amp)
+
+        axes_v[j].plot(t, V, color=color, lw=1.2, label=f'{amp} µA/cm²')
+        axes_gNa[j].plot(t, gNa, color=color, lw=1.2, label=f'{amp} µA/cm²')
+        axes_gK[j].plot(t, gKest, color=color, lw=1.2, label=f'{amp} µA/cm²')
+
+    for ax in [axes_v[j], axes_gNa[j], axes_gK[j]]:
+        ax.set_title(f'Duración = {dur} ms', fontsize=9)
+        ax.set_xlabel('t (ms)')
+        ax.grid(True, alpha=0.3)
+        ax.legend(fontsize=8)
+
+axes_v[0].set_ylabel('V (mV)')
+axes_gNa[0].set_ylabel('gNa (mS/cm²)')
+axes_gK[0].set_ylabel('gKest (mS/cm²)')
+
+for fig in [fig_v, fig_gNa, fig_gK]:
+    fig.tight_layout()
+plt.show()
+
