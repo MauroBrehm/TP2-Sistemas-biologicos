@@ -138,7 +138,7 @@ Nc = N - No
 V_arr  = np.zeros(len(t));  V_arr[0]  = V0
 m_arr  = np.zeros(len(t));  m_arr[0]  = m0
 h_arr  = np.zeros(len(t));  h_arr[0]  = h0
-gK_arr = np.zeros(len(t));  gK_arr[0] = gKBar * No / N
+gK_arr = np.zeros(len(t));  gK_arr[0] = gKBar * (No / N)**4
 
 for k in range(len(t) - 1):
     Vk, mk, hk = V_arr[k], m_arr[k], h_arr[k]
@@ -204,7 +204,7 @@ for N in [10, 100, 1000]:
         V_arr[0] = V0
         m_arr[0] = m0
         h_arr[0] = h0
-        gK_arr[0] = gKBar * No / N  # fracción de canales abiertos × conductancia máxima
+        gK_arr[0] = gKBar * (No / N)**4  # fracción de canales abiertos × conductancia máxima
 
 
         # ─── Bucle de integración estocástica ──────────────────────────
