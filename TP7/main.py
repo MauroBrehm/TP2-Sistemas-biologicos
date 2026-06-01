@@ -151,7 +151,7 @@ for paso in range(n_pasos):
     potencial = nuevo_potencial
     # Mostrar cada 20ms(para la grafica)
     if paso % 20 == 0:
-        if paso>2000:
+        if paso>5000:
             break
         ax.clear()
         img = ax.imshow(estado, cmap=cmap, vmin=0, vmax=3)

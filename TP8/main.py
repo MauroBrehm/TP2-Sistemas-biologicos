@@ -355,8 +355,8 @@ plt.show()
 ###########################################################
 #ACT 5 - Modelo estocastico completo: canales de Na y K estocásticos
 ###########################################################
-NNa= 100
-NK= 100
+NNa= 1000
+NK= 1000
 #Inicializamos K
 No_k = np.random.binomial(NK, n0)
 Nc_k = NK - No_k
