@@ -123,3 +123,7 @@ def decodificar_viterbi(secuencia_obs, estados, simbolos, max_iter = 100):
    # No se como hacerlo :)
 
    return #se devuelve parametros finales y el historial de log_prob_total
+
+# ==================================================
+#ACT 3 - Secuencias de entrenamiento
+# ==================================================
