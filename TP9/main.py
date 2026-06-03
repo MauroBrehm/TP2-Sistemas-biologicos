@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from collections import defaultdict
 
+
 #Paramentros del modelo real (lo que nos da el tp)
 
 #Estados posibles del modelo oculto
@@ -22,6 +23,55 @@ a={'C': {'C': 0.995, 'NC': 0.005}, #desde C, 99.5% de las veces sigo en C, 0.5% 
 b={'C': {'A': 0.30, 'C': 0.20, 'G': 0.20, 'T': 0.30}, 
    'NC': {'A': 0.10, 'C': 0.40, 'G': 0.40, 'T': 0.10}} 
 
+# =============================================================================
+# LECTURA DEL ARCHIVO CSV
+# =============================================================================
+# Columna 'estados': 1 = C (codificante), 2 = NC (no codificante)
+# Columna 'salidas': 1=A, 2=T, 3=C, 4=G  
+ 
+NUM_A_SIMBOLO = {1: 'A', 2: 'T', 3: 'C', 4: 'G'}
+NUM_A_ESTADO  = {1: 'C', 2: 'NC'}
+ 
+def cargar_csv(ruta):
+    """
+    Lee el CSV línea por línea y devuelve:
+      obs_dec          : lista de bases de la secuencia de decodificación
+      est_dec_real     : lista de estados reales de la secuencia de decodificación
+      secs_ap          : lista de 4 listas de bases (secuencias de aprendizaje)
+      secs_ap_estados  : lista de 4 listas de estados reales (aprendizaje)
+    """
+    # Usamos un dict para ir juntando cada secuencia por su nombre
+    obs_por_indice    = defaultdict(list)   # bases
+    est_por_indice    = defaultdict(list)   # estados reales
+    tipo_por_indice   = {}                  # qué tipo es cada índice
+ 
+    with open(ruta, 'r') as f:
+        lineas = f.readlines()
+
+    for linea in lineas[1:]:
+        partes = linea.strip().split(',')
+        tipo    = partes[0]   
+        indice  = partes[1]   
+        estado  = int(partes[2])   
+        salida  = int(partes[3])   
+        
+        obs_por_indice[indice].append(NUM_A_SIMBOLO[salida])
+        est_por_indice[indice].append(NUM_A_ESTADO[estado])
+        tipo_por_indice[indice] = tipo
+ 
+    # --- Separar secuencia de decodificación ---
+    obs_dec      = obs_por_indice['sec_dec_1']
+    est_dec_real = est_por_indice['sec_dec_1']
+ 
+    # --- Separar secuencias de aprendizaje (en orden: ap_1, ap_2, ap_3, ap_4)----
+    indices_ap = sorted(k for k, v in tipo_por_indice.items()
+                        if v == 'sec_aprendizaje')
+ 
+    secs_ap         = [obs_por_indice[idx] for idx in indices_ap]
+    secs_ap_estados = [est_por_indice[idx] for idx in indices_ap]
+ 
+    return obs_dec, est_dec_real, secs_ap, secs_ap_estados
+
 #==================================================
 #ACT 1 - Algoritmo de Viterbi
 #=====================================================
@@ -29,61 +79,92 @@ def viterbi(obs, estados, pi, a, b):
    '''Implementa el algoritmo de Viterbi para encontrar la secuencia de estados mas probable a partir
     de una secuencia de observaciones'''
    T = len(obs)
-   estado_id = {s: i for i, s in enumerate(estados)}
-   V = np.zeros((T, len(estados))) # Matriz de probabilidades V[t][s] de Viterbi
-   psi = np.zeros((T, len(estados)), -1,dtype=int) # Matriz de estados anteriores psi[t][s]
+   N = len(estados)
 
-   #Inicializacion
+   #Mapa de nombre de estado -> indice numerico para indexar arrayd
+  #Ej: {'C': 0, 'NC': 1}
+   estado_id = {s: i for i, s in enumerate(estados)}
+
+   #V[t][i]= log-probabilidad del camino mas probable hasta el tiempo t terminando en el estado i
+   V = np.full((T, N), -np.inf) # Matriz de probabilidades V[t][s] de Viterbi
+   psi = np.full((T, N), -1, dtype=int) # Matriz de estados anteriores psi[t][s]
+
+   #Inicializacion (t=0)
+   #V[0][i]= log(pi[s]) + log(b[s][obs[0]]) para cada estado s
    for s in estados:
       i = estado_id[s]
-      V[0][i] = pi[s] * b[s][obs[0]]
+      p_pi=pi[s]
+      p_b=b[s][obs[0]]
+      #solo calculamos si ambas probabilidades son positivas
+      if p_pi > 0 and p_b > 0:
+         V[0][i] = np.log(p_pi) + np.log(p_b) 
+         #Si alguna de las probabilidades es 0, dejamos V[0][i] como -inf (log(0)=-inf) para indicar que esa ruta no es posible
+      
       #no hay estado anterior psi[0]
 
-   #Recursion
+   #Recursion (t=1 a T-1)
+   #V[t][i] = max_{j} (V[t-1][j] + log(a[j][i]) + log(b[i][obs[t]])) para cada estado i
    for t in range (1, T):
       for e in estados:
-         i = estado_id[e]
-         candidatos = [V[t-1][estado_id[er]] * a[er][e] for er in estados]
-         psi[t][e] = np.argmax(candidatos) #Guardar el estado anterior s' que dio esa probabilidad máxima
-         V[t][i] = max(candidatos) * b[e][obs[t]]
+         i = estado_id[e] #indice del estado actual e
+         p_b = b[e][obs[t]]
+         if p_b == 0:
+            continue #Si la probabilidad de emisión es 0, esa ruta no es posible, dejamos V[t][i] como -inf
+         log_p_b = np.log(p_b)
+         #Calculamos la probabilidad de llegar al estado e desde cada estado anterior posible y nos quedamos con la mayor
+         mejor_prob = -np.inf
+         mejor_prev = -1
+
+         for e_prev in estados:
+            j = estado_id[e_prev] #indice del estado ANTERIOR e_prev
+            p_a = a[e_prev][e]
+            if p_a == 0:
+               continue #Si la probabilidad de transición es 0, esa ruta no es posible, seguimos con el siguiente estado anterior
+            candidato = V[t-1][j] + np.log(p_a)
+            if candidato > mejor_prob:
+               mejor_prob = candidato
+               mejor_prev = j
+         V[t][i] = mejor_prob + log_p_b #Probabilidad total de la mejor ruta hasta el estado e en el tiempo t
+         psi[t][i] = mejor_prev #Guardamos el estado anterior que nos dio la mejor probabilidad
       
    #Al final (en t = T-1):
-   best_final =np.argmax(V[T-1]) #Buscar el estado s con mayor V[T-1][s]
+   best_final =int(np.argmax(V[T-1])) #Buscar el estado s con mayor V[T-1][s]
    prob = V[T-1][best_final] #probabilidad final prob = max(V[T-1][s])
 
    path = [0] * T
    path[T-1] = best_final
    for t in range(T-2, -1, -1):
+      #el estado en t es el predecesor del estado en t+1
       path[t] = psi[t+1][path[t+1]]
 
    path = [estados[i] for i in path] #Ruta óptima: path[s] correspondiente al estado más probable
    return path, prob # Devolver la ruta óptima (path) y su probabilidad (prob)
 
 # ==================================================
-#ACT 2 - Implemetacion Viterbi de decodificacion
+#ACT 2 - Implemetacion Viterbi de decodificacion y ACT 3 - secuencia de entrenamiento
 # ==================================================
 def reestimar_p(secuencia_obs, secuencia_estados, estados, simbolos):
    '''Reestima los parametros a partir de secuencia de observaciones y estados '''
    #Contar transiciones y emisiones
-   cont_pi = defaultdict(float)
-   cont_a = defaultdict(lambda: defaultdict(float))
-   cont_b = defaultdict(lambda: defaultdict(float))
-   cont_estados = defaultdict(float)
+   cont_pi = defaultdict(float) #Contador de estados iniciales
+   cont_a = defaultdict(lambda: defaultdict(float)) #Contador de transiciones entre estados
+   cont_b = defaultdict(lambda: defaultdict(float)) #Contador de emisiones
+   N_secuencias = len(secuencia_obs) #Cantidad de secuencias de entrenamiento
 
    for obs, path in zip(secuencia_obs, secuencia_estados):
-      # pi: estados inicial
+      # Estado inicial de esta secuencia
       cont_pi[path[0]] += 1
 
       for t in range(len(obs)):
+         #contar la emision, en el estado path[t] se emitio obs[t]
          cont_b [path[t]][obs[t]] += 1 #contar emisiones
-         cont_estados[path[t]] += 1 #contar estados
 
+         #contar la transicion (si no es el ultimo paso)
          if t < len(obs) - 1:
             cont_a[path[t]][path[t+1]] += 1 #contar transiciones
    #Reestimar parametros
-   N = len(secuencia_obs)
-
-   pi_n = {s: cont_pi[s] / N for s in estados}
+   #pi[s]= veces que la secuencia empieza en s / total de secuencias
+   pi_n = {s: cont_pi[s] / N_secuencias for s in estados}
 
    a_n = {}
    b_n = {}
@@ -105,6 +186,7 @@ def decodificar_viterbi(secuencia_obs, estados, simbolos, max_iter = 100):
    b = {s: {e: 1/len(simbolos) for e in simbolos} for s in estados}
 
    historial = []
+   paths_finales = None
 
    for iter in range(max_iter):
       paths = []
@@ -115,15 +197,94 @@ def decodificar_viterbi(secuencia_obs, estados, simbolos, max_iter = 100):
          paths.append(path)
          log_prob_total += log_prob
    historial.append(log_prob_total)
+   paths_finales = paths
 
    #reestimar parametros
    pi_nuevo, a_nuevo, b_nuevo = reestimar_p(secuencia_obs, paths, estados, simbolos)
 
-   #Verificamos la convergencia
-   # No se como hacerlo :)
+def entrenar_viterbi(secuencias_obs, estados, simbolos, max_iter=100, tolerancia=1e-4, tol=None): #tolerancia es la tolerancia para la convergencia, 
+   #cuahndo ya casi no cambia  la log-probabilidad total entre iteraciones, consideramos que el modelo ha convergido y cortamos el entrenamiento
+    """
+    Entrena el HMM iterando Viterbi + re-estimacion hasta convergencia
+    tolerancia: si la log-prob total cambia menos que este valor entre dos iteraciones consecutivas, consideramos que el modelo convergio y cortamos
+    """
+    if tol is not None:
+        tolerancia = tol
+    pi_cur = {s: 1/len(estados) for s in estados}
+    a_cur  = {s: {sp: 1/len(estados) for sp in estados} for s in estados}
+    b_cur  = {s: {e:  1/len(simbolos) for e  in simbolos} for s in estados}
+ 
+    historial     = []
+    paths_finales = None
+ 
+    for it in range(max_iter):
+        paths          = []
+        log_prob_total = 0.0
+ 
+        for obs in secuencias_obs:
+            path, lp = viterbi(obs, estados, pi_cur, a_cur, b_cur)
+            paths.append(path)
+            log_prob_total += lp
+ 
+        historial.append(log_prob_total)
+        paths_finales = paths
+ 
+        pi_nuevo, a_nuevo, b_nuevo = reestimar_p(
+            secuencias_obs, paths, estados, simbolos
+        )
+ 
+        if it > 0 and abs(historial[-1] - historial[-2]) < tolerancia:
+            print(f"  Convergió en iteración {it+1}  "
+                  f"(log-prob = {abs(historial[-1]-historial[-2]):.2e})")
+            pi_cur, a_cur, b_cur = pi_nuevo, a_nuevo, b_nuevo
+            break
+ 
+        pi_cur, a_cur, b_cur = pi_nuevo, a_nuevo, b_nuevo
+    else:
+        print(f"  Alcanzó {max_iter} iteraciones sin converger.")
+ 
+    return pi_cur, a_cur, b_cur, historial, paths_finales
 
-   return #se devuelve parametros finales y el historial de log_prob_total
 
-# ==================================================
-#ACT 3 - Secuencias de entrenamiento
-# ==================================================
+
+# =============================================================================
+#Grafica
+# =============================================================================
+def graficar_convergencia(historial):
+    plt.figure(figsize=(7, 4))
+    plt.plot(range(1, len(historial)+1), historial,
+             marker='o', markersize=4, linewidth=1.5, color='steelblue')
+    plt.xlabel("Iteración")
+    plt.ylabel("Log-probabilidad total")
+    plt.title("Convergencia del entrenamiento (Viterbi iterativo)")
+    plt.tight_layout()
+    plt.show()
+
+# =============================================================================
+#archivo y funciones
+# =============================================================================
+import os
+
+# __file__ es la ruta del script actual
+# dirname le saca el nombre del archivo y se queda con la carpeta
+# join une la carpeta con el nombre del csv dentro de modules
+RUTA_CSV = os.path.join(os.path.dirname(__file__), 'modules', 'secuencias.csv')
+
+obs_dec, est_dec_real, secs_ap, secs_ap_estados = cargar_csv(RUTA_CSV)
+print(f"\nDatos cargados:")
+print(f"  Secuencia de decodificación: {len(obs_dec)} bases")
+print(f"  Secuencias de aprendizaje:   {len(secs_ap)} × {len(secs_ap[0])} bases")
+
+print("ACT 1 — Viterbi con parámetros reales (sec_decodificacion)")
+print("-"*58)
+path_dec, prob_dec = viterbi(obs_dec, estados, pi, a, b)
+
+# --- Actividades 2 y 3 ---
+print("\n" + "-"*58)
+print("ACT 2 y 3 — Entrenamiento con sec_ap_1 a sec_ap_4")
+print("-"*58)
+ 
+pi_est, a_est, b_est, historial, paths_ap = entrenar_viterbi(
+      secs_ap, estados, simbolos, max_iter=100, tolerancia=1e-4
+    )
+graficar_convergencia(historial)
