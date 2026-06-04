@@ -288,3 +288,59 @@ pi_est, a_est, b_est, historial, paths_ap = entrenar_viterbi(
       secs_ap, estados, simbolos, max_iter=100, tolerancia=1e-4
     )
 graficar_convergencia(historial)
+
+#Actividad 4: Comparamos los parametros del sistema contra los parametros estimados 
+def comparar_parametros(pi_real, a_real, b_real,pi_est, a_est, b_est,estados, simbolos):
+   print("\n" + "="*60)
+   print("ACT 4 — COMPARACIÓN DE PARÁMETROS")
+   print("="*60)
+
+    
+   # Probabilidades iniciales
+    
+   print("\nProbabilidades iniciales (π)")
+   print("-"*40)
+
+   for s in estados:
+      real = pi_real[s]
+      est  = pi_est[s]
+      error = abs(real - est)
+
+      print(f"{s:>3} | Real = {real:.4f} | "
+            f"Estimado = {est:.4f} | "
+            f"Error = {error:.4f}")
+   # Matriz de transición
+   print("\nMatriz de transición (A)")
+   print("-"*40)
+   for s in estados:
+        for sp in estados:
+            real = a_real[s][sp]
+            est  = a_est[s][sp]
+            error = abs(real - est)
+
+            print(f"{s}->{sp} | Real = {real:.4f} | "
+                  f"Estimado = {est:.4f} | "
+                  f"Error = {error:.4f}")
+   # Matriz de emisión
+   print("\nMatriz de emisión (B)")
+   print("-"*40)
+
+   for s in estados:
+        for e in simbolos:
+            real = b_real[s][e]
+            est  = b_est[s][e]
+            error = abs(real - est)
+
+            print(f"{s} emite {e} | "
+                  f"Real = {real:.4f} | "
+                  f"Estimado = {est:.4f} | "
+                  f"Error = {error:.4f}")
+
+comparar_parametros(pi, a, b, pi_est, a_est, b_est, estados, simbolos)
+#Graficamos la comparacion entre lo que nos dio y lo que deberia darnos
+
+
+print("\n¡A ver si anda")
+print(pi_est)
+print(a_est)
+print(b_est)
