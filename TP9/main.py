@@ -196,8 +196,8 @@ def decodificar_viterbi(secuencia_obs, estados, simbolos, max_iter = 100):
          path, log_prob = viterbi(obs, estados, pi, a, b)
          paths.append(path)
          log_prob_total += log_prob
-   historial.append(log_prob_total)
-   paths_finales = paths
+      historial.append(log_prob_total)
+      paths_finales = paths
 
    #reestimar parametros
    pi_nuevo, a_nuevo, b_nuevo = reestimar_p(secuencia_obs, paths, estados, simbolos)
