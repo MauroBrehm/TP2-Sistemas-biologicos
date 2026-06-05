@@ -253,7 +253,7 @@ def entrenar_viterbi(secuencias_obs, estados, simbolos, max_iter=100, tolerancia
 def graficar_convergencia(historial):
     plt.figure(figsize=(7, 4))
     plt.plot(range(1, len(historial)+1), historial,
-             marker='o', markersize=4, linewidth=1.5, color='steelblue')
+             marker='o', markersize=4, linewidth=1.5, color='magenta')
     plt.xlabel("Iteración")
     plt.ylabel("Log-probabilidad total")
     plt.title("Convergencia del entrenamiento (Viterbi iterativo)")
@@ -289,13 +289,14 @@ pi_est, a_est, b_est, historial, paths_ap = entrenar_viterbi(
     )
 graficar_convergencia(historial)
 
+#===================================================================================
 #Actividad 4: Comparamos los parametros del sistema contra los parametros estimados 
+#===================================================================================
 def comparar_parametros(pi_real, a_real, b_real,pi_est, a_est, b_est,estados, simbolos):
    print("\n" + "="*60)
    print("ACT 4 — COMPARACIÓN DE PARÁMETROS")
    print("="*60)
 
-    
    # Probabilidades iniciales
     
    print("\nProbabilidades iniciales (π)")
@@ -337,44 +338,6 @@ def comparar_parametros(pi_real, a_real, b_real,pi_est, a_est, b_est,estados, si
                   f"Error = {error:.4f}")
 
 comparar_parametros(pi, a, b, pi_est, a_est, b_est, estados, simbolos)
-#Graficamos la comparacion entre lo que nos dio y lo que deberia darnos
-def graficar_comparacion(pi_real, a_real, b_real, pi_est, a_est, b_est, estados, simbolos):
-    # Gráfica de comparación de parámetros
-    fig, axes = plt.subplots(1, 3, figsize=(18, 5))
-
-    # Probabilidades iniciales
-    axes[0].bar(estados, [pi_real[s] for s in estados], alpha=0.5, label='Real')
-    axes[0].bar(estados, [pi_est[s] for s in estados], alpha=0.5, label='Estimado')
-    axes[0].set_title("Probabilidades iniciales (π)")
-    axes[0].legend()
-
-    # Matriz de transición
-    a_real_vals = [[a_real[s][sp] for sp in estados] for s in estados]
-    a_est_vals  = [[a_est[s][sp] for sp in estados] for s in estados]
-
-    im1 = axes[1].imshow(a_real_vals, cmap='Blues', vmin=0, vmax=1)
-    im2 = axes[1].imshow(a_est_vals, cmap='Reds', vmin=0, vmax=1, alpha=0.5)
-    axes[1].set_xticks(range(len(estados)))
-    axes[1].set_yticks(range(len(estados)))
-    axes[1].set_xticklabels(estados)
-    axes[1].set_yticklabels(estados)
-    axes[1].set_title("Matriz de transición (A)")
-    fig.colorbar(im1, ax=axes[1], fraction=0.046, pad=0.04)
-
-    # Matriz de emisión
-    b_real_vals = [[b_real[s][e] for e in simbolos] for s in estados]
-    b_est_vals  = [[b_est[s][e] for e in simbolos] for s in estados]
-
-    im3 = axes[2].imshow(b_real_vals, cmap='Blues', vmin=0, vmax=1)
-    im4 = axes[2].imshow(b_est_vals, cmap='Reds', vmin=0, vmax=1, alpha=0.5)
-    axes[2].set_xticks(range(len(simbolos)))
-    axes[2].set_yticks(range(len(estados)))
-    axes[2].set_xticklabels(simbolos)
-    axes[2].set_yticklabels(estados)
-    axes[2].set_title("Matriz de emisión (B)")
-    fig.colorbar(im3, ax=axes[2], fraction=0.046, pad=0.04)
-
-graficar_comparacion(pi, a, b, pi_est, a_est, b_est, estados, simbolos)
 
 #Probando cosas
 print("\n¡A ver si anda")
