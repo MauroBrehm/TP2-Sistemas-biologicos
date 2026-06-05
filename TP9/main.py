@@ -13,7 +13,7 @@ simbolos=[ 'A', 'C', 'G', 'T']
 
 #pi: probabilidad inicial de cada estado (con que probabilidad empieza la secuencia en cada estado)
 #tp no dice uso 50/50
-pi={'C': 0.5, 'NC': 0.5}
+pi={'C': 0.6, 'NC': 0.4}
 
 #a: matriz de transicion entre estados (probabilidad de pasar de un estado a otro)
 a={'C': {'C': 0.995, 'NC': 0.005}, #desde C, 99.5% de las veces sigo en C, 0.5% paso a NC
@@ -338,9 +338,60 @@ def comparar_parametros(pi_real, a_real, b_real,pi_est, a_est, b_est,estados, si
 
 comparar_parametros(pi, a, b, pi_est, a_est, b_est, estados, simbolos)
 #Graficamos la comparacion entre lo que nos dio y lo que deberia darnos
+def graficar_comparacion(pi_real, a_real, b_real, pi_est, a_est, b_est, estados, simbolos):
+    # Gráfica de comparación de parámetros
+    fig, axes = plt.subplots(1, 3, figsize=(18, 5))
 
+    # Probabilidades iniciales
+    axes[0].bar(estados, [pi_real[s] for s in estados], alpha=0.5, label='Real')
+    axes[0].bar(estados, [pi_est[s] for s in estados], alpha=0.5, label='Estimado')
+    axes[0].set_title("Probabilidades iniciales (π)")
+    axes[0].legend()
 
+    # Matriz de transición
+    a_real_vals = [[a_real[s][sp] for sp in estados] for s in estados]
+    a_est_vals  = [[a_est[s][sp] for sp in estados] for s in estados]
+
+    im1 = axes[1].imshow(a_real_vals, cmap='Blues', vmin=0, vmax=1)
+    im2 = axes[1].imshow(a_est_vals, cmap='Reds', vmin=0, vmax=1, alpha=0.5)
+    axes[1].set_xticks(range(len(estados)))
+    axes[1].set_yticks(range(len(estados)))
+    axes[1].set_xticklabels(estados)
+    axes[1].set_yticklabels(estados)
+    axes[1].set_title("Matriz de transición (A)")
+    fig.colorbar(im1, ax=axes[1], fraction=0.046, pad=0.04)
+
+    # Matriz de emisión
+    b_real_vals = [[b_real[s][e] for e in simbolos] for s in estados]
+    b_est_vals  = [[b_est[s][e] for e in simbolos] for s in estados]
+
+    im3 = axes[2].imshow(b_real_vals, cmap='Blues', vmin=0, vmax=1)
+    im4 = axes[2].imshow(b_est_vals, cmap='Reds', vmin=0, vmax=1, alpha=0.5)
+    axes[2].set_xticks(range(len(simbolos)))
+    axes[2].set_yticks(range(len(estados)))
+    axes[2].set_xticklabels(simbolos)
+    axes[2].set_yticklabels(estados)
+    axes[2].set_title("Matriz de emisión (B)")
+    fig.colorbar(im3, ax=axes[2], fraction=0.046, pad=0.04)
+
+graficar_comparacion(pi, a, b, pi_est, a_est, b_est, estados, simbolos)
+
+#Probando cosas
 print("\n¡A ver si anda")
-print(pi_est)
-print(a_est)
-print(b_est)
+
+for i, path in enumerate(paths_ap):
+    nC = path.count('C')
+    nNC = path.count('NC')
+
+    print(f"Secuencia {i+1}")
+    print(f"C  = {nC}")
+    print(f"NC = {nNC}")
+print("Fin")
+pi_real_obs, a_real_obs, b_real_obs = reestimar_p(
+    secs_ap,
+    secs_ap_estados,
+    estados,
+    simbolos
+)
+comparar_parametros(pi, a, b, pi_real_obs, a_real_obs, b_real_obs, estados, simbolos)
+
