@@ -1,3 +1,5 @@
+from random import random
+
 import numpy as np
 import matplotlib.pyplot as plt
 from collections import defaultdict
@@ -177,61 +179,71 @@ def reestimar_p(secuencia_obs, secuencia_estados, estados, simbolos):
    
    return pi_n, a_n, b_n
 
-def entrenar_viterbi(secuencias_obs, estados, simbolos, max_iter=100, tolerancia=1e-4, tol=None): #tolerancia es la tolerancia para la convergencia, 
+def inicializar_pi_aleatorio(estados):
+    pi_cur = {}
+    suma = 0.0
+    for s in estados:
+        val = random.uniform(0.1, 1.0)  # Genera un número aleatorio entre 0.1 y 1.0 para evitar ceros
+        pi_cur[s] = val
+        suma += val
+    return {s: v/ suma for s, v in pi_cur.items()}
+   
+def entrenar_viterbi(secuencias_obs, estados, simbolos, max_iter=100, tolerancia=1e-4, tol=None, pi_init = None, a_init = None, b_init = None): #tolerancia es la tolerancia para la convergencia, 
    #cuahndo ya casi no cambia  la log-probabilidad total entre iteraciones, consideramos que el modelo ha convergido y cortamos el entrenamiento
-   """
-   Entrena el HMM iterando Viterbi + re-estimacion hasta convergencia
-   tolerancia: si la log-prob total cambia menos que este valor entre dos iteraciones consecutivas, consideramos que el modelo convergio y cortamos
-   """
-   if tol is not None:
-      tolerancia = tol
-   pi_cur = {s: 1/len(estados) for s in estados}
-   a_cur  = {s: {sp: 1/len(estados) for sp in estados} for s in estados}
-   b_cur  = {s: {e:  1/len(simbolos) for e  in simbolos} for s in estados}
-
-   historial     = []
-   paths_finales = None
-
-   for it in range(max_iter):
-      paths          = []
-      log_prob_total = 0.0
-
-      for obs in secuencias_obs:
-         path, lp = viterbi(obs, estados, pi_cur, a_cur, b_cur)
-         paths.append(path)
-         log_prob_total += lp
+    """
+    Entrena el HMM iterando Viterbi + re-estimacion hasta convergencia
+    tolerancia: si la log-prob total cambia menos que este valor entre dos iteraciones consecutivas, consideramos que el modelo convergio y cortamos
+    """
+    if tol is not None:
+        tolerancia = tol
+   
+    pi_cur = {'C': 0.5, 'NC': 0.5} 
+    a_cur  = {'C': {'C': 0.7, 'NC': 0.3}, 'NC': {'C': 0.3, 'NC': 0.7}}
+    b_cur  = {'C': {'A': 0.3, 'T': 0.2,'G': 0.3,'C': 0.2}, 'NC': {'A': 0.4, 'T': 0.1,'G': 0.4,'C': 0.1}}
  
-      historial.append(log_prob_total)
-      paths_finales = paths
+    historial     = []
+    paths_finales = None
  
-      pi_nuevo, a_nuevo, b_nuevo = reestimar_p(
+    for it in range(max_iter):
+        paths          = []
+        log_prob_total = 0.0
+ 
+        for obs in secuencias_obs:
+            path, lp = viterbi(obs, estados, pi_cur, a_cur, b_cur)
+            paths.append(path)
+            log_prob_total += lp
+ 
+        historial.append(log_prob_total)
+        paths_finales = paths
+ 
+        pi_nuevo, a_nuevo, b_nuevo = reestimar_p(
             secuencias_obs, paths, estados, simbolos
         )
  
-      if it > 0 and abs(historial[-1] - historial[-2]) < tolerancia:
-         print(f"  Convergió en iteración {it+1}  "
-               f"(log-prob = {abs(historial[-1]-historial[-2]):.2e})")
-         pi_cur, a_cur, b_cur = pi_nuevo, a_nuevo, b_nuevo
-         break
+        if it > 0 and abs(historial[-1] - historial[-2]) < tolerancia:
+            print(f"  Convergió en iteración {it+1}  "
+                  f"(log-prob = {abs(historial[-1]-historial[-2]):.2e})")
+            pi_cur, a_cur, b_cur = pi_nuevo, a_nuevo, b_nuevo
+            break
  
-      pi_cur, a_cur, b_cur = pi_nuevo, a_nuevo, b_nuevo
-   else:
-      print(f"  Alcanzó {max_iter} iteraciones sin converger.")
+        pi_cur, a_cur, b_cur = pi_nuevo, a_nuevo, b_nuevo
+    else:
+        print(f"  Alcanzó {max_iter} iteraciones sin converger.")
  
-   return pi_cur, a_cur, b_cur, historial, paths_finales
+    return pi_cur, a_cur, b_cur, historial, paths_finales
 
 # =============================================================================
 #Grafica
 # =============================================================================
 def graficar_convergencia(historial):
-   plt.figure(figsize=(7, 4))
-   plt.plot(range(1, len(historial)+1), historial,
-            marker='o', markersize=4, linewidth=1.5, color='magenta')
-   plt.xlabel("Iteración")
-   plt.ylabel("Log-probabilidad total")
-   plt.title("Convergencia del entrenamiento (Viterbi iterativo)")
-   plt.tight_layout()
-   plt.show()
+    plt.figure(figsize=(7, 4))
+    plt.plot(range(1, len(historial)+1), historial,
+             marker='o', markersize=4, linewidth=1.5, color='magenta')
+    plt.xlabel("Iteración")
+    plt.ylabel("Log-probabilidad total")
+    plt.title("Convergencia del entrenamiento (Viterbi iterativo)")
+    plt.tight_layout()
+    plt.show()
 
 # =============================================================================
 #archivo y funciones
