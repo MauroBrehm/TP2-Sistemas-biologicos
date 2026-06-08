@@ -1,8 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation# Para la animación
-
- 
 # ─────────────────────────────────────────────────────────────────────────────
 # PARÁMETROS DE LA SIMULACIÓN
 # ─────────────────────────────────────────────────────────────────────────────
@@ -27,16 +25,19 @@ V_MAX = 15.0  # [m/s]
 # Dominio espacial observable [m] --> region 2D donde se mueven los boids
 X_MIN, X_MAX = 0.0, 50.0
 Y_MIN, Y_MAX = 0.0, 50.0
-historial=[] # Para guardar las posiciones de los boids en cada paso y luego graficar la trayectoria
+# historial=[] # Para guardar las posiciones de los boids en cada paso y luego graficar la trayectoria
+
+# ─────────────────────────────────────────────────────────────────────────────
+# CLASE BOID
 
 class Boid:
     def __init__(self, pos, vel):
-        self.pos = pos  # Posición del boid (vector 2D)
-        self.vel = vel  # Velocidad del boid (vector 2D)
+        self.pos = np.array(pos, dtype=float)  # Posición del boid (vector 2D)
+        self.vel = np.array(vel, dtype=float)  # Velocidad del boid (vector 2D)
 
-# ─────────────────────────────────────────────────────────────────────────────
-# FUNCIONES DE LAS REGLAS DE COMPORTAMIENTO
-# ─────────────────────────────────────────────────────────────────────────────
+    # ─────────────────────────────────────────────────────────────────────────────
+    # FUNCIONES DE LAS REGLAS DE COMPORTAMIENTO
+    # ─────────────────────────────────────────────────────────────────────────────
     def calcular_alineacion(self, todos):
         """
     Regla de alineación --> a_i = (1 / #A_i) * Σ_{j ∈ A_i} v_j  −  v_i
@@ -45,18 +46,22 @@ class Boid:
     dentro del radio RHO_A
     Retorna el vector de influencia (0 si no hay vecinos)
     """
-        vecinos_vel = []
+        vecinos_vel = [
+            otro.vel for otro in todos
+            if otro is not self
+            and np.linalg.norm(self.pos - otro.pos) < RHO_A
+        ]
  
-        for j, otro in enumerate(todos):
-            if otro is self:
-                continue  # Un boid no es vecino de si mismo
+        # for j, otro in enumerate(todos):
+        #     if otro is self:
+        #         continue  # Un boid no es vecino de si mismo
  
-            distancia = np.linalg.norm(self.pos - otro.pos)  # Distancia euclidea [m]
+        #     distancia = np.linalg.norm(self.pos - otro.pos)  # Distancia euclidea [m]
  
-            if distancia < RHO_A:  # El boid j esta dentro de la vecindad de alineación
-                vecinos_vel.append(otro.vel)
+        #     if distancia < RHO_A:  # El boid j esta dentro de la vecindad de alineación
+        #         vecinos_vel.append(otro.vel)
  
-        if len(vecinos_vel) == 0:
+        if not vecinos_vel:
             return np.zeros(2)  # Sin vecinos --> influencia nula (evita división por 0)
  
         velocidad_promedio = np.mean(vecinos_vel, axis=0)  # Velocidad media de los vecinos
@@ -78,7 +83,7 @@ class Boid:
     
             distancia = np.linalg.norm(self.pos - otro.pos)
     
-            if distancia < RHO_S and distancia > 0:  # Vecino demasiado cerca
+            if 0 < distancia < RHO_S:  # Vecino demasiado cerca
                 influencia += self.pos - otro.pos     # Vector que apunta hacia afuera del vecino
     
         return influencia
@@ -102,7 +107,7 @@ class Boid:
             if distancia < RHO_C:  # Vecino dentro de la vecindad de cohesión
                 vecinos_pos.append(otro.pos)
     
-        if len(vecinos_pos) == 0:
+        if not vecinos_pos:
             return np.zeros(2)  # Sin vecinos --> influencia nula
     
         centro = np.mean(vecinos_pos, axis=0)  # Centro geométrico del grupo
@@ -139,6 +144,8 @@ class Boid:
         return fuerza
 
     def actualizar(self,todos):
+
+        vel_prev = self.vel.copy()
         # Calcular las contribuciones de cada regla
         a = self.calcular_alineacion(todos)
         s = self.calcular_separacion(todos)
@@ -146,7 +153,7 @@ class Boid:
         f = self.calcular_fuerza_borde()
 
         # Ecuación (4)
-        self.vel = self.vel + WA*a + WS*s + WC*c + f
+        self.vel = vel_prev + WA*a + WS*s + WC*c + f
 
         # Limitar velocidad máxima
         velocidad = np.linalg.norm(self.vel)
@@ -157,41 +164,162 @@ class Boid:
         # Actualizar posición
         self.pos = self.pos + T*self.vel
 
-#Ahora ya podemos hacer los casos 
-#Creo 2 pajaritos 
-boids = [
-    Boid(
-        np.array([10.0, 25.0]),
-        np.array([5.0, 0.0])
-    ),
+# ─────────────────────────────────────────────────────────────────────────────
+# Simulacion
+# ─────────────────────────────────────────────────────────────────────────────
+PALETA = ['#E63946', "#55CA78", "#B1C219", '#E9C46A', '#F4A261']
+def simular_y_animar (boids, pasos = 1000, titulo = "Simulación de Boids", intervalos = 30):
+    '''Ejecuta la simulacion y muestra una animacion de los boids
+    boids: lista de objetos Boid
+    pasos: cantidad de pasos a simular
+    intervalo: ms entre cada frame '''
 
-    Boid(
-        np.array([40.0, 25.0]),
-        np.array([-5.0, 0.0])
-    )
-]
-#La simulacion se ejecuta durante un número determinado de pasos,  
-# en cada paso se actualizan las posiciones y velocidades de los boids según las reglas de comportamiento.
-#  Para evitar que los boids se actualicen secuencialmente (lo que podría introducir sesgos),
-#  se hace una copia temporal del estado actual antes de actualizar cada boid.
-PASOS = 5000
+    #Guardar historial
+    historial = []
+    for _ in range(pasos):
 
-for paso in range(PASOS):
+        copia =[Boid(b.pos.copy(), b.vel.copy()) for b in boids]
+        for b in boids:
+            b.actualizar(copia)
+        historial.append([b.pos.copy() for b in boids])
 
-    # Guardar estado actual
-    posiciones = [b.pos.copy() for b in boids]
-    velocidades = [b.vel.copy() for b in boids]
+    fig, ax = plt.subplots(figsize = (7, 7))
+    ax.set_xlim(X_MIN, X_MAX)
+    ax.set_ylim(Y_MIN, Y_MAX)
+    ax.set_aspect('equal')
+    ax.set_title(titulo, fontsize = 16)
+    ax.tick_params(colors='#555')
+    for sp in ax.spines.values():
+        sp.set_edgecolor('#555')
 
-    # Crear una copia temporal
-    copia = []
+    ax.add_patch(plt.Rectangle((X_MIN, Y_MIN), X_MAX - X_MIN, Y_MAX - Y_MIN, linewidth = 1.5, edgecolor = '#333'))
+    # Estela (últimos K pasos como líneas semitransparentes)
+    K_TRAIL = 120
+    colors = [PALETA[i % len(PALETA)] for i in range(len(boids))]
+    trails = [ax.plot([], [], '-', color=colors[i], alpha=0.25, linewidth=0.8)[0]
+              for i in range(len(boids))]
+    dots = [ax.plot([], [], 'o', color=colors[i], markersize=6)[0]
+            for i in range(len(boids))]
+ 
+    step_text = ax.text(0.02, 0.97, '', transform=ax.transAxes,
+                        color='#888', fontsize=8, va='top')
+ 
+    def init():
+        for tr in trails:
+            tr.set_data([], [])
+        for d in dots:
+            d.set_data([], [])
+        step_text.set_text('')
+        return trails + dots + [step_text]
+ 
+    def update(frame):
+        inicio = max(0, frame - K_TRAIL)
+        for i, d in enumerate(dots):
+            pos = historial[frame][i]
+            d.set_data([pos[0]], [pos[1]])
+            xs = [historial[t][i][0] for t in range(inicio, frame + 1)]
+            ys = [historial[t][i][1] for t in range(inicio, frame + 1)]
+            trails[i].set_data(xs, ys)
+        step_text.set_text(f't = {frame * T:.2f} s')
+        return trails + dots + [step_text]
+ 
+    # Saltar frames para que la animación no sea demasiado lenta
+    SALTO = 10
+    frames_anim = range(0, pasos, SALTO)
+ 
+    anim = FuncAnimation(fig, update, frames=frames_anim,
+                         init_func=init, interval=intervalos,
+                         blit=True)
+    plt.tight_layout()
+    plt.show()
+    return historial
 
-    for pos, vel in zip(posiciones, velocidades):
-        copia.append(
-            Boid(pos.copy(), vel.copy())
-        )
+def vel_aleatoria(angulo_deg=None):
+    """Devuelve un vector velocidad de módulo V0.
+    Si se pasa angulo_deg se usa ese ángulo; si no, se sortea aleatoriamente."""
+    if angulo_deg is None:
+        angulo_deg = np.random.uniform(0, 360)
+    rad = np.deg2rad(angulo_deg)
+    return np.array([V0 * np.cos(rad), V0 * np.sin(rad)])
 
-    # Actualizar cada boid usando la copia
-    for i, boid in enumerate(boids):
-        boid.actualizar(copia)
-    # Guardar posiciones para graficar trayectoria
-    historial.append(np.array([b.pos.copy() for b in boids]))
+def caso1():
+    """
+    Caso 1 – Un boid se encuentra con otro boid.
+ 
+    Dos boids ubicados en extremos opuestos del dominio, moviéndose
+    el uno hacia el otro. Al acercarse, la cohesión los atrae y la
+    separación evita la colisión; luego se alinean y vuelan juntos.
+    """
+    boids = [
+        Boid([10.0, 25.0], vel_aleatoria(0)),   # → derecha
+        Boid([40.0, 25.0], vel_aleatoria(180)),   # → izquierda
+    ]
+    simular_y_animar(boids, pasos=8000,
+                     titulo="Caso 1 – Un boid se encuentra con otro boid")
+ 
+def caso2():
+    """
+    Caso 2 – Varios boids se encuentran.
+ 
+    Seis boids dispersos por el dominio, cada uno con una dirección
+    inicial aleatoria. Eventualmente forman una o varias bandadas.
+    """
+    np.random.seed(42)
+    posiciones = [
+        [10.0, 10.0], [40.0, 10.0], [25.0, 25.0],
+        [10.0, 40.0], [40.0, 40.0], [25.0,  5.0],
+    ]
+    boids = [
+        Boid(pos, vel_aleatoria())
+        for pos in posiciones
+    ]
+    simular_y_animar(boids, pasos=10000,
+                     titulo="Caso 2 – Varios boids se encuentran")
+    
+def caso3():
+    """
+    Caso 3 – Un boid solitario se encuentra con un grupo.
+ 
+    Un boid aislado vuela hacia un grupo de cinco boids ya formado
+    en el centro del dominio. Se observa cómo el solitario es
+    "absorbido" por la bandada.
+    """
+    # Grupo de 5 boids en el centro, moviéndose hacia la derecha
+    grupo_pos  = [[22.0 + dx, 24.0 + dy]
+                  for dx, dy in [(-1,1),(0,0),(1,-1),(0,2),(-1,-2)]]
+    grupo_vel  = vel_aleatoria(10)   # casi horizontal
+ 
+    boids = [Boid(p, grupo_vel + np.random.randn(2)*0.2)
+             for p in grupo_pos]
+ 
+    # Boid solitario a la izquierda, apuntando al grupo
+    boids.append(Boid([5.0, 25.0], vel_aleatoria(5)))
+ 
+    simular_y_animar(boids, pasos=10000,
+                     titulo="Caso 3 – Un boid solitario se encuentra con un grupo")
+ 
+if __name__ == '__main__':
+    casos = {
+        '1': ('Un boid se encuentra con otro boid',               caso1),
+        '2': ('Varios boids se encuentran',                        caso2),
+        '3': ('Un boid solitario se encuentra con un grupo',       caso3),
+       
+    }
+
+    print(" 0. Ejecutar todos los casos en secuencia")
+    for k, (desc, _) in casos.items():
+        print(f" {k}. {desc:<49}")
+ 
+    opcion = input("\n Ingresá el número de caso (0–3): ").strip()
+ 
+    if opcion == '0':
+        for k, (_, fn) in casos.items():
+            print(f"\n Corriendo Caso {k}...")
+            fn()
+    elif opcion in casos:
+        casos[opcion][1]()
+    else:
+        print("Opción inválida. Ejecutando Caso 1 por defecto.")
+        caso1()
+
+    
