@@ -162,8 +162,7 @@ class Boid:
             self.vel = (self.vel / velocidad) * V_MAX
 
         # Actualizar posición
-        self.pos = self.pos + T*self.vel
-
+        self.pos = self.pos + T * vel_prev 
 # ─────────────────────────────────────────────────────────────────────────────
 # Simulacion
 # ─────────────────────────────────────────────────────────────────────────────
@@ -297,12 +296,75 @@ def caso3():
  
     simular_y_animar(boids, pasos=10000,
                      titulo="Caso 3 – Un boid solitario se encuentra con un grupo")
+def caso4():
+    """
+    Caso 4 – Dos grupos del mismo tamaño se encuentran
  
+    Dos grupos de 5 boids cada uno, moviendose en sentidos opuestos
+    Los boids del mismo grupo comienzan muy juntos (separación < RHO_C)
+    para que ya formen una bandada cohesionada antes del encuentro
+ 
+    Esperado: interacción compleja — pueden fusionarse en una sola bandada,
+    o desviarse y seguir caminos separados dependiendo de las velocidades.
+    """
+    boids = []
+ 
+    # Grupo A — viene de la izquierda moviéndose hacia la derecha
+    # Posiciones apretadas en torno a (12, 25) para que se reconozcan como grupo
+    for i in range(5):
+        offset = np.array([i % 3, i // 3]) * 0.8   # Desplazamiento compacto (< RHO_C)
+        boids.append(Boid(
+            pos=[11.0 + offset[0], 24.0 + offset[1]],
+            vel=vel_aleatoria(0) + np.random.randn(2) * 0.3   # Casi hacia la derecha
+        ))
+ 
+    # Grupo B — viene de la derecha moviéndose hacia la izquierda
+    for i in range(5):
+        offset = np.array([i % 3, i // 3]) * 0.8
+        boids.append(Boid(
+            pos=[38.0 + offset[0], 24.0 + offset[1]],
+            vel=vel_aleatoria(180) + np.random.randn(2) * 0.3  # Casi hacia la izquierda
+        ))
+ 
+    simular_y_animar(boids, pasos=12000,
+                     titulo="Caso 4 – Dos grupos del mismo tamaño se encuentran")
+ 
+ 
+def caso5():
+    """
+    Caso 5 – Dos grupos de distinto tamaño se encuentran
+ 
+    Grupo grande (8 boids) vs grupo pequeño (3 boids) en trayectorias convergentes
+    Esperado: el grupo pequeño puede ser absorbido por el grande, o desviado
+    por la fuerza colectiva. El tamaño desbalanceado genera asimetría visible.
+    """
+    boids = []
+ 
+    # Grupo grande (8 boids) — viene de abajo-izquierda, sube hacia arriba-derecha
+    for i in range(8):
+        offset = np.array([i % 4, i // 4]) * 0.8   
+        boids.append(Boid(
+            pos=[8.0 + offset[0], 14.0 + offset[1]],
+            vel=vel_aleatoria(45) + np.random.randn(2) * 0.3   
+        ))
+ 
+    # Grupo pequeño (3 boids) — viene de arriba-derecha, baja hacia abajo-izquierda
+    for i in range(3):
+        boids.append(Boid(
+            pos=[38.0 + i * 0.8, 36.0],
+            vel=vel_aleatoria(225) + np.random.randn(2) * 0.3  
+        ))
+ 
+    simular_y_animar(boids, pasos=12000,
+                     titulo="Caso 5 – Dos grupos de distinto tamaño se encuentran")
+                     
 if __name__ == '__main__':
     casos = {
         '1': ('Un boid se encuentra con otro boid',               caso1),
         '2': ('Varios boids se encuentran',                        caso2),
         '3': ('Un boid solitario se encuentra con un grupo',       caso3),
+        '4': ('Dos grupos del mismo tamaño se encuentran',        caso4),
+        '5': ('Dos grupos de distinto tamaño se encuentran',      caso5),
        
     }
 
@@ -310,7 +372,7 @@ if __name__ == '__main__':
     for k, (desc, _) in casos.items():
         print(f" {k}. {desc:<49}")
  
-    opcion = input("\n Ingresá el número de caso (0–3): ").strip()
+    opcion = input("\n Ingresá el número de caso (0–5): ").strip()
  
     if opcion == '0':
         for k, (_, fn) in casos.items():
