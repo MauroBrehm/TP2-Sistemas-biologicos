@@ -62,7 +62,7 @@ class Boid:
         #         vecinos_vel.append(otro.vel)
  
         if not vecinos_vel:
-            return np.zeros(2)  # Sin vecinos --> influencia nula (evita división por 0)
+            return np.zeros(2)  # Sin vecinos --> influencia nula (boid sigue su camino sin cambiar)
  
         velocidad_promedio = np.mean(vecinos_vel, axis=0)  # Velocidad media de los vecinos
         return velocidad_promedio - self.vel                # Diferencia respecto a la propia
@@ -108,7 +108,7 @@ class Boid:
                 vecinos_pos.append(otro.pos)
     
         if not vecinos_pos:
-            return np.zeros(2)  # Sin vecinos --> influencia nula
+            return np.zeros(2)  # Sin vecinos --> influencia nula (boid sigue su camino si cambiar)
     
         centro = np.mean(vecinos_pos, axis=0)  # Centro geométrico del grupo
         return centro - self.pos               # Vector que apunta hacia ese centro
@@ -177,7 +177,7 @@ def simular_y_animar (boids, pasos = 1000, titulo = "Simulación de Boids", inte
     historial = []
     for _ in range(pasos):
 
-        copia =[Boid(b.pos.copy(), b.vel.copy()) for b in boids]
+        copia =[Boid(b.pos.copy(), b.vel.copy()) for b in boids] # Copia de la lista de boids para que cada uno vea el estado del grupo antes de actualizarse (actualización sincronica)
         for b in boids:
             b.actualizar(copia)
         historial.append([b.pos.copy() for b in boids])
