@@ -371,7 +371,7 @@ def simular(model, condicion: str, datos: np.ndarray, config: dict):
     # Adaptativo (pesos personalizados)
     if mostrar.get("adaptativo"):
         if config.get("optimizar_pesos"):
-            pesos = optimizar_pesos(model, condicion, datos)
+            pesos = optimizar_pesos(model, datos, condicion)
         crec_a, etoh_a = [], []
         # print(f"  Simulando adaptativo con pesos: {pesos}...")
         for glc in glc_vals:
