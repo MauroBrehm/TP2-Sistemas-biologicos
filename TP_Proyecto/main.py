@@ -1,8 +1,21 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import cobra 
-from scipy.optimize import minimize
+from scipy.optimize import minimize, linprog
 
+
+try:
+    datos_modelo = np.load('imm904_procesado.npz', allow_pickle=True)
+except FileNotFoundError:
+    print("Error: No se encontró 'imm904_procesado.npz'.")
+    print("Por favor, ejecuta primero 'python procesar_modelo.py' para generar las matrices.")
+    exit()
+
+# Estas son las variables globales que usaremos en las funciones matemáticas
+S = datos_modelo['S']
+RXNS = list(datos_modelo['rxns'])  # Convertimos a lista para usar .index() fácilmente
+METS = list(datos_modelo['mets'])
+LB_ORIGINAL = datos_modelo['lb']
+UB_ORIGINAL = datos_modelo['ub']
 # =============================================================================
 # DICCIONARIO DE CONFIGURACIÓN — esto lo editamos dependiendo que queremos mostrar
 # =============================================================================
@@ -126,54 +139,103 @@ OBJ_COMPARTIMENTOS = {
         ("biomass_SC5_notrace", +1),
     ],
 }
-#Cargamos el modelo iMM904
-cobra_model = cobra.io.read_sbml_model("iMM904.xml")
 
 
 # ####################################################################################
 # FUNCIONES AUXILIARES
 # ####################################################################################
+def aplicar_condicion_matemática(condicion: str, glucosa_uptake: float):
+    """
+    Ajusta los vectores lb y ub según la Tabla 5 del paper usando índices de NumPy.
+    Retorna copias modificadas de (lb, ub).
+    """
+    # 1. Clonar los límites originales para no sobreescribir el modelo base
+    lb_mod = np.copy(LB_ORIGINAL)
+    ub_mod = np.copy(UB_ORIGINAL)
+    
+    # Helper rápido para obtener el índice de una reacción por su ID en la lista RXNS
+    def get_idx(rxn_id):
+        return RXNS.index(REA[rxn_id]) if REA[rxn_id] in RXNS else None
 
-def aplicar_condicion(model, condicion: str, glucosa_uptake: float):
-    """
-    Configura los límites del modelo para la condición experimental.
-    Sigue la Tabla 5 del paper.
-    """
-    # Fijar consumo de glucosa al valor experimental
-    try:
-        model.reactions.get_by_id(REA["glucosa"]).lower_bound = -glucosa_uptake
-    except KeyError:
-        pass
- 
+    # 2. Fijar consumo de Glucosa (Fila 1 de la Tabla 5)
+    idx_glc = get_idx("glucosa")
+    if idx_glc is not None:
+        # En FBA, el consumo/uptake se modela como flujo negativo
+        lb_mod[idx_glc] = -glucosa_uptake
+        ub_mod[idx_glc] = -glucosa_uptake  # Forzamos a que sea exactamente el valor experimental
+
+    # 3. Configurar según condiciones Anaeróbica / Aeróbica
     if condicion == "anaerobic":
-        # Sin oxígeno
-        try:
-            r = model.reactions.get_by_id(REA["oxigeno"])
-            r.lower_bound = 0
-            r.upper_bound = 0
-        except KeyError:
-            pass
-        # CO2 fijo (no libre)
-        try:
-            r = model.reactions.get_by_id(REA["co2"])
-            r.lower_bound = 0
-            r.upper_bound = 1000
-        except KeyError:
-            pass
-        # Permitir uptake de esteroles/ácidos grasos que no se sintetizan sin O2
-        for r_id in ["ergosterol", "zymosterol", "hdcea", "ocdca", "ocdcea", "ocdcya"]:
-            try:
-                model.reactions.get_by_id(REA[r_id]).lower_bound = -1000
-            except KeyError:
-                pass
- 
+        # Oxígeno = 0 (Fila 2)
+        idx_o2 = get_idx("oxigeno")
+        if idx_o2 is not None:
+            lb_mod[idx_o2] = 0.0
+            ub_mod[idx_o2] = 0.0
+            
+        # CO2 libre hacia afuera (Fila 3: lb=0, ub=1000)
+        idx_co2 = get_idx("co2")
+        if idx_co2 is not None:
+            lb_mod[idx_co2] = 0.0
+            ub_mod[idx_co2] = 1000.0
+            
+        # Nutrientes anaeróbicos: Esteroles y Ácidos Grasos (Fila 4: lb=-1000, ub=1000)
+        # Permite que la célula los absorba del medio simulado ya que no los puede fabricar sin O2
+        nutrientes_anaerobicos = ["ergosterol", "zymosterol", "hdcea", "ocdca", "ocdcea", "ocdcya"]
+        for nut in nutrientes_anaerobicos:
+            idx_nut = get_idx(nut)
+            if idx_nut is not None:
+                lb_mod[idx_nut] = -1000.0
+                ub_mod[idx_nut] = 1000.0
+
     else:  # aerobic
-        # O2 ilimitado (paper cambia límite de -2 a -1000)
-        try:
-            r = model.reactions.get_by_id(REA["oxigeno"])
-            r.lower_bound = -1000
-        except KeyError:
-            pass
+        # Oxígeno libre ilimitado (Fila 5: lb=-1000, ub=0)
+        idx_o2 = get_idx("oxigeno")
+        if idx_o2 is not None:
+            lb_mod[idx_o2] = -1000.0
+            ub_mod[idx_o2] = 0.0  # Solo consumo, la levadura no "exhala" O2 puro
+
+    return lb_mod, ub_mod
+
+# def aplicar_condicion(model, condicion: str, glucosa_uptake: float):
+#     """
+#     Configura los límites del modelo para la condición experimental.
+#     Sigue la Tabla 5 del paper.
+#     """
+#     # Fijar consumo de glucosa al valor experimental
+#     try:
+#         model.reactions.get_by_id(REA["glucosa"]).lower_bound = -glucosa_uptake
+#     except KeyError:
+#         pass
+ 
+#     if condicion == "anaerobic":
+#         # Sin oxígeno
+#         try:
+#             r = model.reactions.get_by_id(REA["oxigeno"])
+#             r.lower_bound = 0
+#             r.upper_bound = 0
+#         except KeyError:
+#             pass
+#         # CO2 fijo (no libre)
+#         try:
+#             r = model.reactions.get_by_id(REA["co2"])
+#             r.lower_bound = 0
+#             r.upper_bound = 1000
+#         except KeyError:
+#             pass
+#         # Permitir uptake de esteroles/ácidos grasos que no se sintetizan sin O2
+#         for r_id in ["ergosterol", "zymosterol", "hdcea", "ocdca", "ocdcea", "ocdcya"]:
+#             try:
+#                 model.reactions.get_by_id(REA[r_id]).lower_bound = -1000
+#             except KeyError:
+#                 pass
+ 
+#     else:  # aerobic
+#         # O2 ilimitado (paper cambia límite de -2 a -1000)
+#         try:
+#             r = model.reactions.get_by_id(REA["oxigeno"])
+#             r.lower_bound = -1000
+#         except KeyError:
+#             pass
 def construir_objetivo_compartimento(model, comp_reacciones: list) -> dict:
     """
     Dado una lista de (rxn_id, signo), devuelve un dict {rxn_id: coeficiente}
@@ -186,64 +248,130 @@ def construir_objetivo_compartimento(model, comp_reacciones: list) -> dict:
             obj[rxn_id] = float(signo)
     return obj
 
-def fba_combinado(model, pesos: dict, condicion: str, glucosa: float):
+def fba_combinado(pesos: dict, condicion: str, glucosa: float):
     """
-    Parámetros
-    
-        model     : cobra.model
-        pesos     : dict  {compartimento: peso}  se normalizan a suma=1
-        condicion : "anaerobic" o "aerobic"
-        glucosa   : uptake de glucosa en mmol/gPS·h
- 
-    Retorna: (crecimiento, etanol)
+    Resuelve el FBA con la función objetivo combinada usando scipy.optimize.linprog.
     """
- 
-    # Normalizar pesos
+    # 1. Normalizar pesos
     total = sum(abs(v) for v in pesos.values())
     if total == 0:
         return None, None
     pesos_norm = {k: v / total for k, v in pesos.items()}
+
+    # 2. Construir vector de la función objetivo c
+    c_vector = np.zeros(len(RXNS))
+    for comp, peso in pesos_norm.items():
+        if comp not in OBJ_COMPARTIMENTOS or abs(peso) < 1e-10:
+            continue
+        for rxn_id, signo in OBJ_COMPARTIMENTOS[comp]:
+            if rxn_id in RXNS:
+                idx = RXNS.index(rxn_id)
+                c_vector[idx] += peso * float(signo)
+
+    # 3. Obtener límites modificados para la simulación
+    lb_mod, ub_mod = aplicar_condicion_matemática(condicion, glucosa)
+    bounds = list(zip(lb_mod, ub_mod))
+
+    # 4. Resolver el problema lineal: S * v = 0
+    # b_eq es un vector de ceros del tamaño de las filas de S (metabolitos)
+    b_eq = np.zeros(S.shape[0]) 
+    
+    res = linprog(c=-c_vector, A_eq=S, b_eq=b_eq, bounds=bounds, method='highs')
+
+    if not res.success:
+        return 0.0, 0.0
+
+    # 5. Extraer resultados mediante índices
+    idx_biomasa = RXNS.index(REA["biomasa"])
+    idx_etanol = RXNS.index(REA["etanol"])
+    
+    crec = res.x[idx_biomasa]
+    etoh = abs(res.x[idx_etanol]) # Producción neta (si sale de la célula es positivo)
+
+    return float(crec), float(etoh)
+
+
+def fba_clasico(condicion: str, glucosa: float):
+    """
+    FBA tradicional: Maximiza únicamente la reacción de biomasa.
+    """
+    c_vector = np.zeros(len(RXNS))
+    idx_biomasa = RXNS.index(REA["biomasa"])
+    c_vector[idx_biomasa] = 1.0  # Coeficiente 1 solo a la biomasa
+
+    lb_mod, ub_mod = aplicar_condicion_matemática(condicion, glucosa)
+    bounds = list(zip(lb_mod, ub_mod))
+    b_eq = np.zeros(S.shape[0])
+
+    res = linprog(c=-c_vector, A_eq=S, b_eq=b_eq, bounds=bounds, method='highs')
+
+    if not res.success:
+        return 0.0, 0.0
+
+    idx_etanol = RXNS.index(REA["etanol"])
+    crec = res.x[idx_biomasa]
+    etoh = abs(res.x[idx_etanol])
+
+    return float(crec), float(etoh)
+
+# def fba_combinado(model, pesos: dict, condicion: str, glucosa: float):
+#     """
+#     Parámetros
+    
+#         model     : cobra.model
+#         pesos     : dict  {compartimento: peso}  se normalizan a suma=1
+#         condicion : "anaerobic" o "aerobic"
+#         glucosa   : uptake de glucosa en mmol/gPS·h
  
-    with model:
-        aplicar_condicion(model, condicion, glucosa)
+#     Retorna: (crecimiento, etanol)
+#     """
  
-        # Construir función objetivo combinada: suma ponderada de compartimentos
-        objetivo_combinado = {}
-        for comp, peso in pesos_norm.items():
-            if comp not in OBJ_COMPARTIMENTOS or abs(peso) < 1e-10:
-                continue
-            obj_comp = construir_objetivo_compartimento(
-                model, OBJ_COMPARTIMENTOS[comp]
-            )
-            for rxn_id, coef in obj_comp.items():
-                objetivo_combinado[rxn_id] = (
-                    objetivo_combinado.get(rxn_id, 0.0) + peso * coef
-                )
+#     # Normalizar pesos
+#     total = sum(abs(v) for v in pesos.values())
+#     if total == 0:
+#         return None, None
+#     pesos_norm = {k: v / total for k, v in pesos.items()}
  
-        if not objetivo_combinado:
-            return None, None
+#     with model:
+#         aplicar_condicion(model, condicion, glucosa)
  
-        # Asignar objetivo al modelo
-        model.objective = objetivo_combinado
+#         # Construir función objetivo combinada: suma ponderada de compartimentos
+#         objetivo_combinado = {}
+#         for comp, peso in pesos_norm.items():
+#             if comp not in OBJ_COMPARTIMENTOS or abs(peso) < 1e-10:
+#                 continue
+#             obj_comp = construir_objetivo_compartimento(
+#                 model, OBJ_COMPARTIMENTOS[comp]
+#             )
+#             for rxn_id, coef in obj_comp.items():
+#                 objetivo_combinado[rxn_id] = (
+#                     objetivo_combinado.get(rxn_id, 0.0) + peso * coef
+#                 )
  
-        try:
-            sol = model.optimize()
-            if sol.status != "optimal":
-                return None, None
-        except Exception:
-            return None, None
+#         if not objetivo_combinado:
+#             return None, None
  
-        # Extraer crecimiento y etanol
-        try:
-            crec = sol.fluxes[REA["biomasa"]]
-        except KeyError:
-            crec = 0.0
-        try:
-            etoh = abs(sol.fluxes.get(REA["etanol"], 0.0))
-        except Exception:
-            etoh = 0.0
+#         # Asignar objetivo al modelo
+#         model.objective = objetivo_combinado
  
-        return float(crec), float(etoh)
+#         try:
+#             sol = model.optimize()
+#             if sol.status != "optimal":
+#                 return None, None
+#         except Exception:
+#             return None, None
+ 
+#         # Extraer crecimiento y etanol
+#         try:
+#             crec = sol.fluxes[REA["biomasa"]]
+#         except KeyError:
+#             crec = 0.0
+#         try:
+#             etoh = abs(sol.fluxes.get(REA["etanol"], 0.0))
+#         except Exception:
+#             etoh = 0.0
+ 
+#         return float(crec), float(etoh)
 
 def error_promedio(pred, exp):
     """Error relativo promedio |pred - exp| / |exp|. Ignora NaN."""
@@ -254,7 +382,7 @@ def error_promedio(pred, exp):
         return np.nan
     return float(np.mean(np.abs(pred[mask] - exp[mask]) / np.abs(exp[mask])))
 
-def optimizar_pesos(model, datos_exp, condicion):
+def optimizar_pesos(condicion: str, datos_exp: np.ndarray):
     '''Busca los pesos w_k que minimizan el error entre predicciones y datos experimentales
     usando scipy.optimize.minimize. Solo optimiza para la condición seleccionada en CONFIG.'''
 
@@ -265,6 +393,7 @@ def optimizar_pesos(model, datos_exp, condicion):
     def funcion_objetivo(w):
         # Normalizar pesos
         w = np.array(w)
+        w_sum=w.sum()
         w_norm = w / w.sum() if w.sum() > 0 else np.ones_like(w) / len(w)
         pesos_dict = {
             "citosol":     w_norm[0],
@@ -275,13 +404,14 @@ def optimizar_pesos(model, datos_exp, condicion):
         predicciones = []
         for fila in datos_exp:
             glucosa = fila[col_glc]
-            pred_crec, _ = fba_combinado(model, pesos_dict, condicion, glucosa)
+            pred_crec, _ = fba_combinado(pesos_dict, condicion, glucosa)
             predicciones.append(pred_crec)
         return error_promedio(predicciones, datos_exp[:, col_crec])
-    
+    #Punto de partida(pesos iguales)
     w_i = np.array([0.25, 0.25, 0.25, 0.25])
     result = minimize (funcion_objetivo, w_i, method="Nelder-Mead")
 
+    #Aseguramos valores absolutos no negativos y normalizamos 
     w_opt = np.abs(result.x)
     w_opt_n = w_opt / w_opt.sum()
     pesos_optimos = {
@@ -292,27 +422,27 @@ def optimizar_pesos(model, datos_exp, condicion):
     }
     return pesos_optimos
 
-def fba_clasico(model, condicion: str, glucosa: float):
-    """FBA tradicional: maximizar biomasa."""
+# def fba_clasico(model, condicion: str, glucosa: float):
+#     """FBA tradicional: maximizar biomasa."""
 
-    with model:
-        aplicar_condicion(model, condicion, glucosa)
-        try:
-            bio_r = model.reactions.get_by_id(REA["biomasa"])
-        except KeyError:
-            return None, None
+#     with model:
+#         aplicar_condicion(model, condicion, glucosa)
+#         try:
+#             bio_r = model.reactions.get_by_id(REA["biomasa"])
+#         except KeyError:
+#             return None, None
         
-        model.objective = bio_r
-        try:
-            sol = model.optimize()
-            if sol.status != "optimal":
-                return None, None
-        except Exception:
-            return None, None
+#         model.objective = bio_r
+#         try:
+#             sol = model.optimize()
+#             if sol.status != "optimal":
+#                 return None, None
+#         except Exception:
+#             return None, None
  
-        crec = float(sol.fluxes.get(REA["biomasa"], 0.0))
-        etoh = float(abs(sol.fluxes.get(REA["etanol"], 0.0)))
-        return crec, etoh
+#         crec = float(sol.fluxes.get(REA["biomasa"], 0.0))
+#         etoh = float(abs(sol.fluxes.get(REA["etanol"], 0.0)))
+#         return crec, etoh
     
 # ##############################################################################################
 # SIMULACION
@@ -371,7 +501,7 @@ def simular(model, condicion: str, datos: np.ndarray, config: dict):
     # Adaptativo (pesos personalizados)
     if mostrar.get("adaptativo"):
         if config.get("optimizar_pesos"):
-            pesos = optimizar_pesos(model, datos, condicion)
+            pesos = optimizar_pesos(condicion, datos)
         crec_a, etoh_a = [], []
         # print(f"  Simulando adaptativo con pesos: {pesos}...")
         for glc in glc_vals:
